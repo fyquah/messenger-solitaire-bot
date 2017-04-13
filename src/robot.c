@@ -43,16 +43,43 @@ void robot_mouse_move(robot_h robot, int x, int y)
                 printf("Failed\n");
         }
 
-        printf("Moving to %d %d\n", x, y);
         (*env)->CallVoidMethod(env, robot, method, (jint) x, (jint) y);
 }
 
 
-void robot_mouse_press(robot_h robot)
+void robot_mouse_press(robot_h robot, int button)
 {
+        JNIEnv *env;
+        jclass klass;
+        jmethodID method;
+
+        (*jvm)->AttachCurrentThread(jvm, (void **) &env, NULL);
+        klass = (*env)->FindClass(env, "java/awt/Robot");
+        method = (*env)->GetMethodID(env, klass, "mousePress", "(I)V");
+
+        if (method == 0) {
+                printf("Failed\n");
+        }
+
+        (*env)->CallVoidMethod(env, robot, method, (jint) button);
+}
 
 
+void robot_mouse_release(robot_h robot, int button)
+{
+        JNIEnv *env;
+        jclass klass;
+        jmethodID method;
 
+        (*jvm)->AttachCurrentThread(jvm, (void **) &env, NULL);
+        klass = (*env)->FindClass(env, "java/awt/Robot");
+        method = (*env)->GetMethodID(env, klass, "mouseRelease", "(I)V");
+
+        if (method == 0) {
+                printf("Failed\n");
+        }
+
+        (*env)->CallVoidMethod(env, robot, method, (jint) button);
 }
 
 
