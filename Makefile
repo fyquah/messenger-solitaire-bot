@@ -21,8 +21,8 @@ $(ENTRY_POINT): Main.java
 	javac $<
 
 
-$(ROBOT_LIB): src/robot.o
-	${CC} $^ -o $@ $(CFLAGS) -shared
+$(ROBOT_LIB): src/robot.o include/robot.h
+	${CC} $< -o $@ $(CFLAGS) -shared
 
 
 $(PROGRAM_LIB): test/main.o src/entry_point.o $(ROBOT_LIB)
