@@ -23,6 +23,12 @@ const int ROBOT_BUTTON3_MASK = 4;
 void robot_jvm_init(JNIEnv *env);
 
 robot_h robot_init();
+
+/* keyboard */
+void robot_key_press(robot_h robot, int keycode);
+void robot_key_release(robot_h robot, int keycode);
+
+/* mouse */
 void robot_mouse_move(robot_h robot, int x, int y);
 void robot_mouse_press(robot_h robot, int button);
 void robot_mouse_release(robot_h robot, int button);

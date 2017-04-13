@@ -29,56 +29,54 @@ robot_h robot_init()
 }
 
 
+#define SETUP_JAVA_ENV(name, signature)                                     \
+        JNIEnv *env;                                                        \
+        static jmethodID method = 0;                                        \
+                                                                            \
+        (*jvm)->AttachCurrentThread(jvm, (void **) &env, NULL);             \
+                                                                            \
+	if (method == 0) {                                                  \
+                jclass klass = (*env)->FindClass(env, "java/awt/Robot");    \
+                method = (*env)->GetMethodID(env, klass, name, signature);  \
+                                                                            \
+                if (method == 0) {                                          \
+                        printf("Failed\n");                                 \
+                        fflush(stdout);                                     \
+                }                                                           \
+	}                                                                   \
+
+
+void robot_key_press(robot_h robot, int keycode)
+{
+        SETUP_JAVA_ENV("keyPress", "(I)V");
+        (*env)->CallVoidMethod(env, robot, method, (jint) keycode);
+}
+
+
+void robot_key_release(robot_h robot, int keycode)
+{
+        SETUP_JAVA_ENV("keyRelease", "(I)V");
+        (*env)->CallVoidMethod(env, robot, method, (jint) keycode);
+}
+
+
 void robot_mouse_move(robot_h robot, int x, int y)
 {
-        JNIEnv *env;
-        jclass klass;
-        jmethodID method;
-
-        (*jvm)->AttachCurrentThread(jvm, (void **) &env, NULL);
-        klass = (*env)->FindClass(env, "java/awt/Robot");
-        method = (*env)->GetMethodID(env, klass, "mouseMove", "(II)V");
-
-        if (method == 0) {
-                printf("Failed\n");
-        }
-
+        SETUP_JAVA_ENV("mouseMove", "(II)V");
         (*env)->CallVoidMethod(env, robot, method, (jint) x, (jint) y);
 }
 
 
 void robot_mouse_press(robot_h robot, int button)
 {
-        JNIEnv *env;
-        jclass klass;
-        jmethodID method;
-
-        (*jvm)->AttachCurrentThread(jvm, (void **) &env, NULL);
-        klass = (*env)->FindClass(env, "java/awt/Robot");
-        method = (*env)->GetMethodID(env, klass, "mousePress", "(I)V");
-
-        if (method == 0) {
-                printf("Failed\n");
-        }
-
+        SETUP_JAVA_ENV("mousePress", "(I)V");
         (*env)->CallVoidMethod(env, robot, method, (jint) button);
 }
 
 
 void robot_mouse_release(robot_h robot, int button)
 {
-        JNIEnv *env;
-        jclass klass;
-        jmethodID method;
-
-        (*jvm)->AttachCurrentThread(jvm, (void **) &env, NULL);
-        klass = (*env)->FindClass(env, "java/awt/Robot");
-        method = (*env)->GetMethodID(env, klass, "mouseRelease", "(I)V");
-
-        if (method == 0) {
-                printf("Failed\n");
-        }
-
+        SETUP_JAVA_ENV("mouseRelease", "(I)V");
         (*env)->CallVoidMethod(env, robot, method, (jint) button);
 }
 
