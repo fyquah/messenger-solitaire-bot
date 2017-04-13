@@ -4,18 +4,34 @@ ifeq ($(UNAME_S),Darwin)
 	INC = -Iinclude/ -I/System/Library/Frameworks/JavaVM.framework/Headers
 	CFLAGS += -DDARWIN -framework JavaVM $(INC)
 	CXXFLAGS += $(CFLAGS) -std=c++11
-	TARGET_LIB=librobot.dylib
+	ROBOT_LIB=librobot.dylib
+	PROGRAM_LIB=libprogram.dylib
 	CC=clang
 	OS=mac
 endif
 
 
-all: $(TARGET_LIB)
+ENTRY_POINT=Main.class
 
 
-$(TARGET_LIB): src/robot.o
+all: $(ROBOT_LIB) $(PROGRAM_LIB) $(ENTRY_POINT)
+
+
+$(ENTRY_POINT): Main.java
+	javac $<
+
+
+$(ROBOT_LIB): src/robot.o
 	${CC} $^ -o $@ $(CFLAGS) -shared
 
 
-main: test/main.o $(TARGET_LIB)
-	$(CXX) $< -o $@ -L. -lrobot
+$(PROGRAM_LIB): test/main.o src/entry_point.o $(ROBOT_LIB)
+	$(CXX) $^ -o $@ $(CFLAGS) -L. -lrobot -shared
+
+
+run: $(PROGRAM_LIB) $(ROBOT_LIB) $(ENTRY_POINT)
+	java Main
+
+
+clean:
+	rm -f $(PROGRAM_LIB) $(ROBOT_LIB) src/robot.o src/entry_point.o test/main.o
