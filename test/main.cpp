@@ -5,9 +5,8 @@
 #include <robot.h>
 
 
-int entry_point(int argc, char *argv[])
+int entry_point(int argc, const char *argv[])
 {
-  std::cout << "Hello" << std::endl;
   robot_h robot = robot_init();
   for (int i = 0 ; i < 10 ; i++) {
     robot_mouse_press(robot, ROBOT_BUTTON1_MASK);

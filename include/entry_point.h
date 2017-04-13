@@ -22,4 +22,4 @@ JNIEXPORT void JNICALL Java_Main_entry_1point
 #endif
 
 
-int entry_point(int argc, char *argv[]);
+int entry_point(int argc, const char *argv[]);
