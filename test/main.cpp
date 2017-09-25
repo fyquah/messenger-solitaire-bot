@@ -14,6 +14,7 @@
 
 #include "game.hpp"
 #include "vision.hpp"
+#include "interact.hpp"
 
 int entry_point(int argc, const char *argv[])
 {
@@ -22,7 +23,6 @@ int entry_point(int argc, const char *argv[])
 
   vision_init(robot);
   tableau_position_t pos = { .deck = 2, .num_hidden = 2, .position = 3 };
-  /* card_t card = recognize_tableau_card(pos); */
   game_state_t game_state = load_initial_game_state();
   std::cout << game_state << std::endl;
   robot_free(robot);

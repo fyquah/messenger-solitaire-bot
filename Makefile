@@ -36,7 +36,7 @@ $(ENTRY_POINT): Main.java
 $(ROBOT_LIB): src/robot.o include/robot.h
 	${CC} $< -o $@ $(CFLAGS) -shared
 
-TEST_SRC=test/main.o test/vision.o test/game.o
+TEST_SRC=test/main.o test/vision.o test/game.o test/interact.o
 
 
 $(PROGRAM_LIB): $(TEST_SRC) src/entry_point.o $(ROBOT_LIB)
