@@ -1,7 +1,9 @@
 UNAME_S := $(shell uname -s)
 
+INC = -include/
+
 ifeq ($(UNAME_S),Darwin)
-	INC = -Iinclude/ -I/System/Library/Frameworks/JavaVM.framework/Headers
+	INC += -I/System/Library/Frameworks/JavaVM.framework/Headers
 	CFLAGS += -DDARWIN -framework JavaVM $(INC)
 	CXXFLAGS += $(CFLAGS) -std=c++11
 	ROBOT_LIB=librobot.dylib
@@ -9,6 +11,17 @@ ifeq ($(UNAME_S),Darwin)
 	CC=clang
 	OS=mac
 endif
+ifeq ($(UNAME_S),Linux)
+	INC = -Iinclude/ -I/usr/lib64/java/include/ \
+	      -I/usr/lib64/java/include/linux
+	CFLAGS += -DLINUX $(INC) -fpic
+	CXXFLAGS += $(CFLAGS) -std=c++11
+	ROBOT_LIB=librobot.so
+	PROGRAM_LIB=libprogram.so
+	CC=gcc
+	OS=linux
+endif
+
 
 
 ENTRY_POINT=Main.class

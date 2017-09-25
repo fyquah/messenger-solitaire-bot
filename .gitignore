@@ -1,4 +1,5 @@
 main
 *.dylib
+*.so
 *.o
 Main.class
