@@ -1,3 +1,6 @@
+#ifndef ROBOT_H
+#define ROBOT_H
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -53,4 +56,6 @@ void robot_free(robot_h robot);
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif

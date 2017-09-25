@@ -43,7 +43,6 @@ void vision_init(robot_h robot);
  * which potentially messes up the tiles in xmonad.
  */
 void hackish_imshow(
-    robot_h robot,
     const std::string& winname,
     cv::InputArray mat
 );

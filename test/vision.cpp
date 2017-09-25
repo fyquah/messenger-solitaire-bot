@@ -16,19 +16,18 @@ static number_t recognize_number(uint32_t *number_pixels)
   return ACE;
 }
 
-static suite_t recognize_suite(uint32_t *suite_pixels)
+static suite_t recognize_suite(uint32_t *pixels)
 {
+  const uint32_t height = CARD_SUITE_HEIGHT;
+  const uint32_t width = CARD_SUITE_WIDTH;
+  cv::Mat image = cv::Mat(height, width, CV_8UC4, pixels);
+  hackish_imshow("hello", image);
+  cv::waitKey(0);
+  return HEART;
 }
 
-card_t recognize_foundation_card(const int deck)
+card_t recognize_card(int x, int y)
 {
-  return { .suite = HEART, .number = ACE };
-}
-
-card_t recognize_visible_pile_card()
-{
-  uint32_t x = VISIBLE_PILE.first;
-  uint32_t y = VISIBLE_PILE.second;
   uint32_t *number_pixels =
     new uint32_t[CARD_NUMBER_HEIGHT * CARD_NUMBER_WIDTH];
   uint32_t *suite_pixels =
@@ -53,12 +52,26 @@ card_t recognize_visible_pile_card()
   };
 }
 
-card_t recognize_tableau_card(const tableau_position_t & position)
+card_t recognize_foundation_card(const int deck)
 {
   return { .suite = HEART, .number = ACE };
 }
 
-void hackish_imshow(robot_h robot, const std::string& winname, cv::InputArray mat)
+card_t recognize_visible_pile_card()
+{
+  return recognize_card(VISIBLE_PILE.first, VISIBLE_PILE.second);
+}
+
+card_t recognize_tableau_card(const tableau_position_t & position)
+{
+  int x = TABLEAU.first + position.deck * TABLEAU_SIDE_OFFSET;
+  int y = TABLEAU.second
+    + (position.num_hidden * TABLEAU_UNSEEN_OFFSET)
+    + (position.position * TABLEAU_SEEN_OFFSET);
+  return recognize_card(x, y);
+}
+
+void hackish_imshow(const std::string& winname, cv::InputArray mat)
 {
   robot_mouse_move(robot, 2000, 100);
   robot_mouse_press(robot, ROBOT_BUTTON1_MASK);

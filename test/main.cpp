@@ -21,7 +21,8 @@ int entry_point(int argc, const char *argv[])
   robot_h robot = robot_init();
 
   vision_init(robot);
-  recognize_visible_pile_card();
+  tableau_position_t pos = { .deck = 6, .num_hidden = 6, .position = 0 };
+  recognize_tableau_card(pos);
   robot_free(robot);
   return 0;
 }
