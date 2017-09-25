@@ -4,6 +4,13 @@
 #include "vision.hpp"
 #include "game.hpp"
 
+static bool sandbox = false;
+
+void set_sandbox_mode(bool a)
+{
+  sandbox = a;
+}
+
 game_state_t load_initial_game_state()
 {
   tableau_deck_t tableau[7];
