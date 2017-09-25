@@ -3,7 +3,11 @@
 
 #include <stdint.h>
 
+#include <iostream>
 #include <string>
+#include <vector>
+
+#include "utils.hpp"
 
 enum suite_t {  /* Ordering equivalent to chinese poker. */
   DIAMOND,
@@ -32,7 +36,7 @@ struct card_t {
   suite_t suite;
   number_t number;
 
-  std::string to_string();
+  std::string to_string() const;
 };
 
 struct tableau_position_t {
@@ -41,7 +45,25 @@ struct tableau_position_t {
   uint32_t position; 
 };
 
+struct tableau_deck_t {
+  uint32_t num_down_cards;
+  std::vector<card_t> cards; /* New cards get added to the end of queue */
+};
+
 const char * print_suite(suite_t suite);
 const char * print_number(number_t number);
+
+/* TODO(fyquah): Ideally I want to have all the fields below be [const].
+ * it is, however, fairly hard to initialize structs with array fields in
+ * C++.
+ * */
+struct game_state_t {
+  Option<card_t> foundation[4];
+  tableau_deck_t tableau[7];
+  Option<card_t> waste_pile_top;
+  uint32_t stock_pile_size;
+};
+
+std::ostream& operator<<(std::ostream & out, const game_state_t & game);
 
 #endif

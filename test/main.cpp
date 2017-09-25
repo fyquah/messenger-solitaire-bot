@@ -23,8 +23,8 @@ int entry_point(int argc, const char *argv[])
   vision_init(robot);
   tableau_position_t pos = { .deck = 2, .num_hidden = 2, .position = 3 };
   /* card_t card = recognize_tableau_card(pos); */
-  card_t card = recognize_foundation_card(0);
-  std::cout << card.to_string() << std::endl;
+  game_state_t game_state = load_initial_game_state();
+  std::cout << game_state << std::endl;
   robot_free(robot);
   return 0;
 }

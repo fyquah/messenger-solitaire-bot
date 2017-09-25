@@ -63,4 +63,6 @@ card_t recognize_foundation_card(const int deck);
 card_t recognize_visible_pile_card();
 card_t recognize_tableau_card(const tableau_position_t & position);
 
+game_state_t load_initial_game_state();
+
 #endif
