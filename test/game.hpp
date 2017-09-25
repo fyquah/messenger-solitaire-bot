@@ -3,9 +3,11 @@
 
 #include <stdint.h>
 
-enum suite_t {
-  CLUB,
+#include <string>
+
+enum suite_t {  /* Ordering equivalent to chinese poker. */
   DIAMOND,
+  CLUB,
   HEART,
   SPADE,
 };
@@ -29,6 +31,8 @@ enum number_t {
 struct card_t {
   suite_t suite;
   number_t number;
+
+  std::string to_string();
 };
 
 struct tableau_position_t {
@@ -36,5 +40,8 @@ struct tableau_position_t {
   uint32_t num_hidden;
   uint32_t position; 
 };
+
+const char * print_suite(suite_t suite);
+const char * print_number(number_t number);
 
 #endif

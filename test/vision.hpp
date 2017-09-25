@@ -27,6 +27,7 @@ const auto TABLEAU = std::make_pair(40, 263);
 const auto TABLEAU_SIDE_OFFSET = 70;  /* Offsets between decks. */
 const auto TABLEAU_UNSEEN_OFFSET = 14;  /* Offset between flipped cards. */
 const auto TABLEAU_SEEN_OFFSET = 28;  /* Offset between unflipped cards. */
+const auto SUITE_OFFSET = 30u; /* Offset from beginning of card to suite */
 
 const uint32_t CARD_NUMBER_HEIGHT = 30;
 const uint32_t CARD_NUMBER_WIDTH = 25;
