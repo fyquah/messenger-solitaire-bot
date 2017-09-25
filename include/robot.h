@@ -37,7 +37,7 @@ robot_h robot_init();
 void robot_screenshot(
     robot_h robot, 
     const rectangle_t rect,
-    /* output - assumes has size equal to area of rect. */ uint32_t *dest
+    /* output */ uint32_t *dest
 );
 
 /* keyboard */

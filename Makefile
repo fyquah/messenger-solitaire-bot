@@ -36,8 +36,10 @@ $(ENTRY_POINT): Main.java
 $(ROBOT_LIB): src/robot.o include/robot.h
 	${CC} $< -o $@ $(CFLAGS) -shared
 
+TEST_SRC=test/main.o  test/vision.o
 
-$(PROGRAM_LIB): test/main.o src/entry_point.o $(ROBOT_LIB)
+
+$(PROGRAM_LIB): $(TEST_SRC) src/entry_point.o $(ROBOT_LIB)
 	$(CXX) $^ -o $@ $(CFLAGS) -L. -lrobot -lopencv_core -lopencv_highgui -shared
 
 
