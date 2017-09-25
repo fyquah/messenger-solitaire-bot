@@ -2,4 +2,5 @@ main
 *.dylib
 *.so
 *.o
+*.log
 Main.class

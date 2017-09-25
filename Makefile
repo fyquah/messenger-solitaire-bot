@@ -1,6 +1,6 @@
 UNAME_S := $(shell uname -s)
 
-INC = -include/
+INC = -Iinclude/ -I../opencv/build/_install/usr/local/include/ -L../opencv/build/_install/usr/local/lib/
 
 ifeq ($(UNAME_S),Darwin)
 	INC += -I/System/Library/Frameworks/JavaVM.framework/Headers
@@ -12,9 +12,8 @@ ifeq ($(UNAME_S),Darwin)
 	OS=mac
 endif
 ifeq ($(UNAME_S),Linux)
-	INC = -Iinclude/ -I/usr/lib64/java/include/ \
-	      -I/usr/lib64/java/include/linux
-	CFLAGS += -DLINUX $(INC) -fpic
+	INC += -I/usr/lib64/java/include/ -I/usr/lib64/java/include/linux
+	CFLAGS += -DLINUX $(INC) -fpic -g -ggdb
 	CXXFLAGS += $(CFLAGS) -std=c++11
 	ROBOT_LIB=librobot.so
 	PROGRAM_LIB=libprogram.so
@@ -39,7 +38,7 @@ $(ROBOT_LIB): src/robot.o include/robot.h
 
 
 $(PROGRAM_LIB): test/main.o src/entry_point.o $(ROBOT_LIB)
-	$(CXX) $^ -o $@ $(CFLAGS) -L. -lrobot -shared
+	$(CXX) $^ -o $@ $(CFLAGS) -L. -lrobot -lopencv_core -lopencv_highgui -shared
 
 
 run: $(PROGRAM_LIB) $(ROBOT_LIB) $(ENTRY_POINT)

@@ -1,13 +1,16 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
-#include <stdint.h>
 #include <utility>
 
+#include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <robot.h>
 
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+#include <robot.h>
 
 /* [TOP_LEFT_CORNER] referes to those of the game window rather than the
  * deck of cards.
@@ -29,10 +32,24 @@ const auto TABLEAU_SIDE_OFFSET = 70;  /* Offsets between decks. */
 const auto TABLEAU_UNSEEN_OFFSET = 14;  /* Offset between flipped cards. */
 const auto TABLEAU_SEEN_OFFSET = 28;  /* Offset between unflipped cards. */
 
+/* A variant of imshow that displays in the _second_ window. This prevents
+ * opening a window in the same screen as the game (in a dual monitor setup)
+ * which potentially messes up the tiles in xmonad.
+ */
+void hackish_imshow(robot_h robot, const std::string& winname, cv::InputArray mat)
+{
+  robot_mouse_move(robot, 2000, 100);
+  robot_mouse_press(robot, ROBOT_BUTTON1_MASK);
+  robot_mouse_release(robot, ROBOT_BUTTON1_MASK);
+  cv::imshow(winname, mat);
+}
+
 int entry_point(int argc, const char *argv[])
 {
   robot_h robot = robot_init();
   auto pos = TABLEAU;
+  uint32_t *dest = new uint32_t[100 * 100];
+
   pos.first = pos.first + 2 * TABLEAU_SIDE_OFFSET;
   pos.second = pos.second + 2 * TABLEAU_UNSEEN_OFFSET + 0 * TABLEAU_SEEN_OFFSET;
 
@@ -45,8 +62,16 @@ int entry_point(int argc, const char *argv[])
     robot_mouse_move(robot, x, y);
     robot_mouse_press(robot, ROBOT_BUTTON1_MASK);
     robot_mouse_release(robot, ROBOT_BUTTON1_MASK);
+    rectangle_t rect = { .x = x, .y = y, .height = 100, .width = 100 };
+
+    robot_screenshot(robot, rect, dest);
     sleep(1);
   }
+
+  cv::Mat image = cv::Mat(100, 100, CV_8UC4, dest);
+  hackish_imshow(robot, "window", image);
+  cv::waitKey(0);
+
   robot_free(robot);
   return 0;
 }
