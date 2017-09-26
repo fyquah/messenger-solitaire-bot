@@ -247,7 +247,6 @@ std::shared_ptr<Move> calculate_obvious_move(const game_state_t & state)
       << " -> "
       << dest << "(" << state.tableau[dest].cards.at(0).to_string() << ")"
       << " to release more hidden cards\n";
-    std::cout << state << std::endl;
 
     return make_move(
         loc_tableau(src, 0),
@@ -322,7 +321,7 @@ game_state_t strategy_init(const game_state_t & initial_state)
 
   /* Knowledge about state: */
   for (int i = 0 ; i < glob_stock_pile.size() ; i++) {
-    std::cout << "i = " << glob_stock_pile[i].to_string() << "\n";
+    std::cout << i << " = " << glob_stock_pile[i].to_string() << "\n";
   }
 
   /* This gets us to square one */
