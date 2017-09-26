@@ -16,6 +16,10 @@ enum suite_t {  /* Ordering equivalent to chinese poker. */
   SPADE,
 };
 
+static inline int suite_color(suite_t s) {
+  return s % 2;
+}
+
 enum number_t {
   ACE = 1,
   DEUCE = 2,

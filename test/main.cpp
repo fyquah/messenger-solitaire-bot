@@ -31,6 +31,8 @@ int entry_point(int argc, const char *argv[])
     game_state = strategy_step(game_state, &moved);
   } while(moved);
 
+  std::cout << game_state << "\n";
+
   robot_mouse_move(robot, 2000, 100);
   robot_mouse_press(robot, ROBOT_BUTTON1_MASK);
   robot_mouse_release(robot, ROBOT_BUTTON1_MASK);

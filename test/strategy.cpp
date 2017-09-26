@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <memory>
 #include <vector>
 #include <exception>
@@ -178,8 +179,7 @@ std::shared_ptr<Move> calculate_obvious_move(const game_state_t & state)
     if (possible_to_play_deuce(state, card)) {
       return make_move(
           loc_waste_pile(),
-          loc_foundation(uint32_t(card.suite))
-      );
+          loc_foundation(uint32_t(card.suite)));
     }
   }
   
@@ -192,12 +192,59 @@ std::shared_ptr<Move> calculate_obvious_move(const game_state_t & state)
 
         return make_move(
             loc_tableau(i, cards.size() - 1),
-            loc_foundation(uint32_t(card.suite))
+            loc_foundation(uint32_t(card.suite)));
+      }
+    }
+  }
+
+  /* Rule 2: If there is a move that frees a down card - play that move.
+   * In case there are multiple such moves, play that one that frees the
+   * one with the greatest number of hidden cards. (except for promoting
+   * to foundation. That is a little risky)
+   */
+  std::vector<std::pair<uint32_t, std::pair<uint32_t, uint32_t>>>
+    downcard_freeing_candidates;
+
+  for (int i = 0 ; i < 7 ; i++) {
+    /* This implies cards.size() != 0 */
+    if (tbl_deck[i].num_down_cards == 0) {
+      continue;
+    }
+    card_t src = tbl_deck[i].cards.at(0);
+
+    for (int j = 0 ; j < 7 ; j++) {
+      if (i == j) {
+        continue;
+      }
+      card_t dest = tbl_deck[j].cards.back();
+
+      if (src.number == dest.number- 1 &&
+          suite_color(src.suite) != suite_color(dest.suite)) {
+        downcard_freeing_candidates.push_back(
+            std::make_pair(
+              tbl_deck[i].num_down_cards,
+              std::make_pair(i, j))
         );
       }
     }
   }
 
+  if (downcard_freeing_candidates.size() != 0) {
+    const auto & p = *std::max_element(
+        downcard_freeing_candidates.begin(),
+        downcard_freeing_candidates.end()
+    );
+    uint32_t src = p.second.first;
+    uint32_t dest = p.second.second;
+
+    std::cout << "Moving visible tableau from " << src << " to " << dest
+      << " to release more hidden cards\n";
+
+    return make_move(
+        loc_tableau(src, 0),
+        loc_tableau(dest, state.tableau[dest].cards.size() - 1)
+    );
+  }
 
   return std::shared_ptr<Move>(NULL);
 }
