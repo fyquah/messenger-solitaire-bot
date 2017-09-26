@@ -2,6 +2,7 @@
 #include <memory>
 #include <vector>
 #include <exception>
+#include <sstream>
 
 #include "strategy.hpp"
 #include "game.hpp"
@@ -26,6 +27,7 @@ public:
   virtual uint32_t index () = 0;
   virtual uint32_t sub_index () = 0;
   virtual location_tag_t tag () = 0;
+  virtual std::string to_string() = 0;
 };
 
 class WastePile : public Location
@@ -44,6 +46,10 @@ public:
   location_tag_t tag()
   {
     return LOC_WASTE_PILE;
+  }
+
+  std::string to_string() {
+    return std::string("waste_pile");
   }
 };
 
@@ -72,6 +78,12 @@ public:
   {
     return LOC_TABLEAU;
   }
+
+  std::string to_string() {
+    std::stringstream ss;
+    ss << "Tableau deck " << index_ << " sub-index " << sub_index_;
+    return ss.str();
+  }
 };
 
 class Foundation : public Location
@@ -96,19 +108,50 @@ public:
   {
     return LOC_FOUNDATION;
   }
+
+  std::string to_string() {
+    std::stringstream ss;
+    ss << "Foundation " << index_;
+    return ss.str();
+  }
 };
 
 class Move 
 {
 public:
-  const std::shared_ptr<Location> from;
-  const std::shared_ptr<Location> to;
+  std::shared_ptr<Location> from;
+  std::shared_ptr<Location> to;
 
   Move(
       const std::shared_ptr<Location> & from,
       const std::shared_ptr<Location> & to
   ) : from(from), to(to) {}
+
+  Move & operator=(const Move & other) {
+    from = other.from;
+    to = other.to;
+    return *this;
+  }
 };
+
+std::ostream& operator<<(std::ostream & out, const Move & move) {
+  return out << "from " << move.from.get()->to_string()
+    << " to " << move.to.get()->to_string();
+}
+
+static void update_glob_stock_pile(const game_state_t & state, Move move)
+{
+  if (move.from.get()->tag() == LOC_WASTE_PILE) {
+    card_t card = state.waste_pile_top.get();
+
+    glob_stock_pile.erase(
+        std::remove(
+          glob_stock_pile.begin(),
+          glob_stock_pile.end(),
+          card),
+        glob_stock_pile.end());
+  }
+}
 
 static bool possible_to_play_deuce(
     const game_state_t & state, const card_t & card)
@@ -347,15 +390,185 @@ static int find_stock_pile_position(const game_state_t & state)
   throw FindException();
 }
 
+static std::vector<std::pair<Move, card_t>> compute_join_path(
+    const game_state_t & state,
+    uint32_t src_deck,
+    uint32_t dest_deck,
+    /* output */ bool *ptr_exists
+)
+{
+  const card_t src = state.tableau[src_deck].cards.at(0);
+  const Option<card_t> dest =
+    (state.tableau[dest_deck].cards.size() == 0)
+    ? Option<card_t>()
+    : Option<card_t>(state.tableau[dest_deck].cards.back())
+  ;
+  std::vector<std::pair<Move, card_t>> ret;
+  int left_in_deck[7];
+
+  if (dest.is_some()) {
+    card_t d = dest.get();
+
+    bool p1 = (d.number <= src.number);
+    bool p2 =
+      ((d.number - src.number) % 2 == 0)
+      && suite_color(d.suite) != suite_color(src.suite);
+    bool p3 =
+      ((d.number - src.number) % 2 == 1)
+      && suite_color(d.suite) == suite_color(src.suite);
+
+    if (p1 || p2 || p3) {
+      std::cout << "This is an impossible move. Terminating" << std::endl;
+      *ptr_exists = false;
+      return ret;
+    }
+  }
+
+  for (int i = 0 ; i < 7 ; i++) {
+    left_in_deck[i] = state.tableau[i].cards.size();
+  }
+
+  const uint32_t limit = dest.is_some() ? dest.get().number - 1 : KING;
+
+  for (card_t start = src; uint32_t(start.number) < limit; ) {
+
+    std::cout << "=> Looking for continuation for " << start.to_string() << "\n";
+
+    for (card_t node : glob_stock_pile) {
+      if (node.number == start.number + 1
+          && suite_color(node.suite) != suite_color(start.suite)) {
+
+        Move move = Move(
+            loc_waste_pile(),
+
+            /* TODO(fyquah): Shouldn't really matter to have a random
+             * subindex here. But it sure is inelegant.
+             */
+            loc_tableau(dest_deck, 0));
+        ret.push_back(std::make_pair(move, node));
+
+        std::cout << "---> Found in deck\n";
+
+        goto found;
+      }
+    }
+
+    for (int i = 0 ; i < 7 ; i++) {
+      if (i == src_deck
+          || i == dest_deck
+          || state.tableau[i].cards.size() == 0) {
+        continue;
+      }
+
+      card_t node = state.tableau[i].cards[left_in_deck[i] - 1];
+
+      if (node.number == start.number + 1
+          && suite_color(node.suite) != suite_color(start.suite)) {
+        Move move = Move(
+            loc_tableau(i, left_in_deck[i] - 1),
+
+            /* TODO(fyquah): Shouldn't really matter to have a random
+             * subindex here. But it sure is inelegant.
+             */
+            loc_tableau(dest_deck, 0));
+
+        ret.push_back(std::make_pair(move, node));
+        left_in_deck[i]--;
+
+        std::cout << "---> Found in tableau " << i << '\n';
+        goto found;
+      }
+    }
+
+    *ptr_exists = false;
+    return ret;
+found:
+    start = ret.back().second;
+  }
+
+  *ptr_exists = true;
+  std::reverse(ret.begin(), ret.end());
+  return ret;
+}
+
 static game_state_t enroute_to_obvious_by_peeking(
     const game_state_t & initial_state,
     bool *moved
 )
 {
+
+  /* Rule 3a: Try to artifically move one deck to another using the help
+   * of the wasted pile.
+   */
+  for (int src = 0 ; src < 7 ; src++) {
+    if (initial_state.tableau[src].num_down_cards == 0) {
+      continue;
+    }
+
+    for (int dest = 0; dest < 7 ; dest++) {
+      if (src == dest) {
+        continue;
+      }
+
+      /* Try to find a path that would allow us to move the entire visible
+       * stack at [src] to [dest].
+       */
+      std::cout << "Searching for " << src << " -> " << dest << "!"  << std::endl;
+      bool exists;
+      std::vector<std::pair<Move, card_t>> path = compute_join_path(
+          initial_state, src, dest, &exists);
+
+      if (exists) {
+        std::cout << "Path exists!" << std::endl;
+        game_state_t state = initial_state;
+
+        for (int i = 0 ; i < path.size() ; i++) {
+          Move move = path[i].first;
+          card_t card = path[i].second;
+
+          std::cout << "  Step " << i << ": " << move << " "  << card.to_string()
+            << std::endl;
+
+          if (move.from.get()->tag() == LOC_WASTE_PILE) {
+            std::cout << "HERE" << std::endl;
+            while (true) {
+
+              if (!state.waste_pile_top.is_some()) {
+                state = draw_from_stock_pile(state);
+
+              } else if (state.waste_pile_top.get() == card) {
+                break;
+
+              } else if (state.stock_pile_size == 0) {
+                state = reset_stock_pile(state);
+
+              } else {
+                state = draw_from_stock_pile(state);
+              }
+            }
+          }
+
+          update_glob_stock_pile(state, move);
+          state = perform_move(state, std::make_shared<Move>(move));
+        }
+
+        std::shared_ptr<Move> final_move = make_move(
+            loc_tableau(src, 0),
+            loc_tableau(dest, state.tableau[dest].cards.size() - 1)
+        );
+        state = perform_move(state, final_move);
+
+        *moved = true;
+        return state;
+      } else {
+        std::cout << "Path not found!" << std::endl;
+      }
+    }
+  }
+
   *moved = false;
   return initial_state;
 }
-
 
 game_state_t strategy_step(const game_state_t & start_state, bool *moved)
 {
@@ -365,6 +578,7 @@ game_state_t strategy_step(const game_state_t & start_state, bool *moved)
 
   if (move != NULL) {
     *moved = true;
+    update_glob_stock_pile(state, *move.get());
     return perform_move(state, move);
   }
 
