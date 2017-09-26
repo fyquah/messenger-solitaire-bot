@@ -3,6 +3,8 @@
 
 #include <exception>
 
+#include <robot.h>
+
 #include "game.hpp"
 
 class IllegalMoveException : public std::exception {};

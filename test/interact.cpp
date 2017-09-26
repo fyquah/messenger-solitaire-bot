@@ -178,7 +178,7 @@ static bool is_promote_to_foundation_legal(
       (!foundation.is_some() && card.number == ACE)
       || (foundation.is_some()
           && foundation.get().suite == card.suite
-          && foundation.get().suite == card.number - 1)
+          && foundation.get().number == card.number - 1)
   );
 }
 

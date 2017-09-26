@@ -12,6 +12,7 @@
 
 #include <robot.h>
 
+#include "strategy.hpp"
 #include "game.hpp"
 #include "vision.hpp"
 #include "interact.hpp"
@@ -23,13 +24,17 @@ int entry_point(int argc, const char *argv[])
 
   vision_init(robot);
   interact_init(robot);
-  tableau_position_t pos = { .deck = 2, .num_hidden = 2, .position = 0 };
   game_state_t game_state = load_initial_game_state();
-  game_state = move_from_column_to_column(game_state, pos, 6);
-  pos = { .deck = 6, .num_hidden = 6, .position = 0 };
-  game_state = move_from_column_to_column(game_state, pos, 4);
+  bool moved;
 
-  std::cout << game_state << std::endl;
+  do {
+    game_state = strategy_step(game_state, &moved);
+  } while(moved);
+
+  robot_mouse_move(robot, 2000, 100);
+  robot_mouse_press(robot, ROBOT_BUTTON1_MASK);
+  robot_mouse_release(robot, ROBOT_BUTTON1_MASK);
   robot_free(robot);
+
   return 0;
 }
