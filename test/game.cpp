@@ -53,6 +53,7 @@ std::ostream& operator<<(std::ostream & out, const game_state_t & game)
 {
   out << ">> Game state\n";
   out << "Foundation: \n";
+
   for (int i = 0 ; i < 4 ; i++) {
     if (game.foundation[i].is_some()) {
       out << i << ": " << game.foundation[i].get().to_string() << "\n";

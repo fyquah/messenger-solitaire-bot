@@ -62,6 +62,7 @@ struct game_state_t {
   tableau_deck_t tableau[7];
   Option<card_t> waste_pile_top;
   uint32_t stock_pile_size;
+  uint32_t remaining_pile_size;
 };
 
 std::ostream& operator<<(std::ostream & out, const game_state_t & game);
