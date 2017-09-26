@@ -480,6 +480,7 @@ found:
       continue;
     }
 
+    *exists = true;
     return ret;
 }
 
@@ -697,14 +698,19 @@ static game_state_t enroute_to_obvious_by_peeking(
     }
   }
 
-  /* Rule 3c: Eagerly promote any cards to foundation if they can
+  /* Rule 3c: Promote any cards to foundation if they can
    * immeadiately give us more new information. (this should cover
    * the case where we need to explicitly promote deuce).
    */
+  std::cout << "Attempting lazy promotion!" << std::endl;
   for (int src = 0 ; src < 7 ; src++) {
     const tableau_deck_t tbl_deck = initial_state.tableau[src];
 
-    if (tbl_deck.num_down_cards == 0 || tbl_deck.cards.size() != 1) {
+
+    /* We do not skip if [tbl_deck.num_down_cards == 0]. It might open up
+     * space for King cards.
+     */
+    if (tbl_deck.cards.size() != 1) {
       continue;
     }
 
@@ -726,6 +732,33 @@ static game_state_t enroute_to_obvious_by_peeking(
    * increases the foundation piles' size. (At this point, we are probably
    * going to lose anyway ...)
    */
+
+  std::cout << "Attempting lazy promotion!" << std::endl;
+  for (int src = 0 ; src < 7 ; src++) {
+    const tableau_deck_t tbl_deck = initial_state.tableau[src];
+
+
+    /* We do not skip if [tbl_deck.num_down_cards == 0]. It might open up
+     * space for King cards.
+     */
+    if (tbl_deck.cards.size() == 0) {
+      continue;
+    }
+
+    card_t deck_card = tbl_deck.cards[0];
+    Option<card_t> foundation_card = initial_state.foundation[deck_card.suite];
+    bool exists;
+
+    std::vector<std::pair<Move, card_t>> auxilary_path =
+      compute_foundation_path(initial_state, src, &exists);
+
+    if (exists) {
+      *moved = true;
+      return execute_path(initial_state, auxilary_path, src,
+          loc_foundation(deck_card.suite));
+    }
+  }
+
 
   *moved = false;
   return initial_state;
