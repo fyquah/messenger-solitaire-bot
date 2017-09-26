@@ -9,6 +9,10 @@
 
 namespace {
 
+/* TODO(fyquah): Globals? Ewwwwww. */
+static bool glob_is_stock_pile_explored;
+static std::vector<card_t> glob_stock_pile;
+
 enum location_tag_t
 {
   LOC_WASTE_PILE = 0,
@@ -112,7 +116,8 @@ static bool possible_to_play_deuce(
   suite_t suite = card.suite;
   bool ret = 
     state.foundation[suite].is_some()
-    && state.foundation[suite].get().number == ACE;
+    && state.foundation[suite].get().number == ACE
+    && card.number == DEUCE;
 
   if (ret) {
     std::cout
@@ -237,8 +242,12 @@ std::shared_ptr<Move> calculate_obvious_move(const game_state_t & state)
     uint32_t src = p.second.first;
     uint32_t dest = p.second.second;
 
-    std::cout << "Moving visible tableau from " << src << " to " << dest
+    std::cout << "Moving visible tableau from "
+      << src << "("<< state.tableau[src].cards.back().to_string() << ")"
+      << " -> "
+      << dest << "(" << state.tableau[dest].cards.at(0).to_string() << ")"
       << " to release more hidden cards\n";
+    std::cout << state << std::endl;
 
     return make_move(
         loc_tableau(src, 0),
@@ -275,23 +284,99 @@ static game_state_t perform_move(
     };
 
     return move_from_column_to_column(state, position, to->index());
-
   }
+
 
   throw std::exception();
 }
 
 }
 
-game_state_t strategy_step(const game_state_t & state, bool *moved)
+game_state_t strategy_init(const game_state_t & initial_state)
 {
+  /* Due to the way the game is scored, it is okay for us to shuffle through
+   * the initial cards to learn what is in the deck.
+   */
+  game_state_t state = initial_state;
+
+  glob_is_stock_pile_explored = true;
+
+  for (int i = 0 ; i < 24 ; i++) {
+    state = draw_from_stock_pile(state);
+    glob_stock_pile.push_back(state.waste_pile_top.get());
+
+    while (true) {
+      std::shared_ptr<Move> move = calculate_obvious_move(state);
+
+      if (move == NULL) {
+        break;
+      }
+
+      state = perform_move(state, move);
+
+      if (move.get()->from.get()->tag() == LOC_WASTE_PILE) {
+        glob_stock_pile.pop_back();
+      }
+    }
+  }
+
+  /* Knowledge about state: */
+  for (int i = 0 ; i < glob_stock_pile.size() ; i++) {
+    std::cout << "i = " << glob_stock_pile[i].to_string() << "\n";
+  }
+
+  /* This gets us to square one */
+  return reset_stock_pile(state);
+}
+
+class FindException : public std::exception {};
+
+static int find_stock_pile_position(const game_state_t & state)
+{
+  if (!state.waste_pile_top.is_some()) {
+    return -1;
+  }
+
+  const card_t card = state.waste_pile_top.get();
+
+  for (int i = 0 ; i < glob_stock_pile.size(); i++) {
+    if (card == glob_stock_pile[i]) {
+      return i;
+    }
+  }
+
+  throw FindException();
+}
+
+static game_state_t enroute_to_obvious_by_peeking(
+    const game_state_t & initial_state,
+    bool *moved
+)
+{
+  *moved = false;
+  return initial_state;
+}
+
+
+game_state_t strategy_step(const game_state_t & start_state, bool *moved)
+{
+  /* Rule 0 to 2 (the base rules) are in the obvious_move function. */
+  game_state_t state = start_state;
   std::shared_ptr<Move> move = calculate_obvious_move(state);
 
-  if (move == NULL) {
-    *moved = false;
+  if (move != NULL) {
+    *moved = true;
+    return perform_move(state, move);
+  }
+
+  /* Rule 3: If there is no obvious way to do rule 0 to 2, let's cheat
+   * by looking at the stock_pile to try to do rule rule 0 to 2.
+   */
+  state = enroute_to_obvious_by_peeking(state, moved);
+  if (*moved) {
     return state;
   }
 
-  *moved = true;
-  return perform_move(state, move);
+  *moved = false;
+  return state;
 }

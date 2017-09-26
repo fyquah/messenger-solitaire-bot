@@ -69,4 +69,7 @@ card_t recognize_foundation_card(const int deck);
 card_t recognize_visible_pile_card();
 card_t recognize_tableau_card(const tableau_position_t & position);
 
+/* For data collection used in template matching */
+void save_visible_pile_number(const std::string name);
+
 #endif

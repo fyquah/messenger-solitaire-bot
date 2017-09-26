@@ -69,6 +69,7 @@ struct game_state_t {
   uint32_t remaining_pile_size;
 };
 
+bool operator==(const card_t & a, const card_t & b);
 std::ostream& operator<<(std::ostream & out, const game_state_t & game);
 
 #endif

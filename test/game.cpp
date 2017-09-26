@@ -48,6 +48,10 @@ std::string card_t::to_string() const
   return std::string(buffer);
 }
 
+bool operator==(const card_t & a, const card_t & b)
+{
+  return a.number == b.number && a.suite == b.suite;
+}
 
 std::ostream& operator<<(std::ostream & out, const game_state_t & game)
 {

@@ -24,9 +24,13 @@ int entry_point(int argc, const char *argv[])
 
   vision_init(robot);
   interact_init(robot);
+
   game_state_t game_state = load_initial_game_state();
   bool moved;
 
+  std::cout << "Initial state = " << game_state << std::endl;
+
+  game_state = strategy_init(game_state);
   do {
     game_state = strategy_step(game_state, &moved);
   } while(moved);

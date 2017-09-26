@@ -200,3 +200,19 @@ void hackish_imshow(const std::string& winname, cv::InputArray mat)
   cv::imshow(winname, mat);
 }
 
+void save_visible_pile_number(std::string name)
+{
+  uint32_t *pixels =
+    new uint32_t[CARD_NUMBER_HEIGHT * CARD_NUMBER_WIDTH];
+  const rectangle_t rect =
+    { .x = uint32_t(VISIBLE_PILE.first),
+      .y = uint32_t(VISIBLE_PILE.second),
+      .height = CARD_NUMBER_HEIGHT,
+      .width = CARD_NUMBER_WIDTH };
+
+  robot_screenshot(robot, rect, pixels);
+  cv::Mat image = cv::Mat(CARD_NUMBER_HEIGHT, CARD_NUMBER_WIDTH, CV_8UC4, pixels);
+  cv::cvtColor(image, image, CV_RGBA2GRAY);
+  simple_threshold(image, image);
+  cv::imwrite(name, image);
+}
