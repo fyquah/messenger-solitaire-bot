@@ -33,7 +33,7 @@ static void drag_mouse(
   usleep(200000);
 }
 
-static void unsafe_remove_card_from_visible_pile(game_state_t * state)
+static void unsafe_remove_card_from_visible_pile(game_state_t *state)
 {
   state->remaining_pile_size = state->remaining_pile_size - 1;
 
@@ -42,6 +42,40 @@ static void unsafe_remove_card_from_visible_pile(game_state_t * state)
   } else {
     state->waste_pile_top = Option<card_t>(recognize_visible_pile_card());
   }
+}
+
+static void unsafe_remove_card_from_tableau(
+    game_state_t *state, uint32_t deck)
+{
+  tableau_deck_t & tbl_deck = state->tableau[deck];
+  tbl_deck.cards.pop_back();
+
+  if (tbl_deck.cards.size() == 0 && tbl_deck.num_down_cards != 0) {
+    tableau_position_t pos = {
+      .deck = deck,
+      .num_hidden = tbl_deck.num_down_cards - 1,
+      .position = 0
+    };
+
+    tbl_deck.num_down_cards -= 1;
+    tbl_deck.cards.push_back(recognize_tableau_card(pos));
+  }
+}
+
+static std::pair<uint32_t, uint32_t> get_end_card_position(
+    const game_state_t & state, uint32_t deck_pos)
+{
+  tableau_deck_t tbl_deck = state.tableau[deck_pos];
+
+  return std::make_pair(
+    TABLEAU.first
+      + (deck_pos * TABLEAU_SIDE_OFFSET)
+      + (CARD_WIDTH / 2),
+    TABLEAU.second
+      + (tbl_deck.num_down_cards * TABLEAU_UNSEEN_OFFSET)
+      + ((tbl_deck.cards.size() ? tbl_deck.cards.size() - 1 : 0) * TABLEAU_SEEN_OFFSET)
+      + (CARD_HEIGHT / 2)
+  );
 }
 
 void interact_init(robot_h r)
@@ -169,15 +203,7 @@ game_state_t move_from_visible_pile_to_tableau(
       VISIBLE_PILE.first + CARD_WIDTH / 2 ,
       VISIBLE_PILE.second + CARD_HEIGHT / 2
   );
-  std::pair<uint32_t, uint32_t> to = std::make_pair(
-    TABLEAU.first
-      + (deck * TABLEAU_SIDE_OFFSET)
-      + (CARD_WIDTH / 2),
-    TABLEAU.second
-      + (tableau_deck.num_down_cards * TABLEAU_UNSEEN_OFFSET)
-      + ((tableau_deck.cards.size() ? tableau_deck.cards.size() - 1 : 0) * TABLEAU_SEEN_OFFSET)
-      + (CARD_HEIGHT / 2)
-  );
+  std::pair<uint32_t, uint32_t> to = get_end_card_position(state, deck);
   drag_mouse(from, to);
 
   game_state_t next_state = state;
@@ -223,3 +249,37 @@ game_state_t move_from_visible_pile_to_foundation(
   return next_state;
 }
 
+game_state_t move_from_tableau_to_foundation(
+  const game_state_t & state,
+  const uint32_t tableau_position,
+  const uint32_t foundation_position 
+)
+{
+  const tableau_deck_t & tbl_deck = state.tableau[tableau_position];
+
+  if (tbl_deck.cards.size() == 0) {
+    throw IllegalMoveException();
+  }
+
+  const Option<card_t> & foundation = state.foundation[foundation_position];
+  const card_t & foundation_bound = tbl_deck.cards.back();
+
+  if (!is_promote_to_foundation_legal(foundation, foundation_bound)) {
+    throw IllegalMoveException();
+  }
+
+  std::pair<uint32_t, uint32_t> from = get_end_card_position(
+      state, tableau_position);
+  std::pair<uint32_t, uint32_t> to = std::make_pair(
+      FOUNDATION_DECKS[foundation_position].first + CARD_WIDTH / 2 ,
+      FOUNDATION_DECKS[foundation_position].second + CARD_HEIGHT / 2
+  );
+  drag_mouse(from, to);
+
+  game_state_t next_state = state;
+  next_state.foundation[foundation_position] = Option<card_t>(foundation_bound);
+  unsafe_remove_card_from_tableau(&next_state, tableau_position);
+
+  return next_state;
+
+}
