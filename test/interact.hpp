@@ -5,9 +5,8 @@
 
 #include "game.hpp"
 
-class IllegalMoveException : public std::exception
-{
-};
+class IllegalMoveException : public std::exception {};
+class InconsistentArgument : public std::exception {};
 
 void interact_init(robot_h robot);
 void set_sandbox_mode(bool flag);

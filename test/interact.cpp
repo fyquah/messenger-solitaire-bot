@@ -283,3 +283,50 @@ game_state_t move_from_tableau_to_foundation(
   return next_state;
 
 }
+
+game_state_t move_from_column_to_column(
+    const game_state_t & state,
+    const tableau_position_t & position,
+    const uint32_t destination
+)
+{
+  const tableau_deck_t & src_deck = state.tableau[position.deck];
+  const tableau_deck_t & dest_deck = state.tableau[destination];
+
+  if (position.num_hidden != src_deck.num_down_cards) {
+    throw InconsistentArgument();
+  }
+
+  if (position.position >= src_deck.cards.size()
+      || !is_transfer_legal(src_deck.cards[position.position], dest_deck)) {
+    throw IllegalMoveException();
+  }
+
+  std::pair<uint32_t, uint32_t> from = std::make_pair(
+    TABLEAU.first + (position.deck * TABLEAU_SIDE_OFFSET),
+    TABLEAU.second
+      + (position.num_hidden * TABLEAU_UNSEEN_OFFSET)
+      + (position.position * TABLEAU_SEEN_OFFSET)
+  );
+  std::pair<uint32_t, uint32_t> to = get_end_card_position(
+      state, destination);
+  drag_mouse(from, to);
+
+  game_state_t next_state = state;
+
+  next_state.tableau[destination].cards.insert(
+      next_state.tableau[destination].cards.end(),
+      next_state.tableau[position.deck].cards.begin() + position.position,
+      next_state.tableau[position.deck].cards.end()
+  );
+
+  /* unsafe_remove_card removes one card, so we should remove all but the
+   * last one
+   */
+  next_state.tableau[position.deck].cards.erase(
+      next_state.tableau[position.deck].cards.begin() + (position.position + 1),
+      next_state.tableau[position.deck].cards.end());
+  unsafe_remove_card_from_tableau(&next_state, position.deck);
+
+  return next_state;
+}
