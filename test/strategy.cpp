@@ -258,6 +258,7 @@ std::shared_ptr<Move> calculate_obvious_move(const game_state_t & state)
     if (tbl_deck[i].num_down_cards == 0) {
       continue;
     }
+
     card_t src = tbl_deck[i].cards.at(0);
 
     for (int j = 0 ; j < 7 ; j++) {
@@ -301,8 +302,15 @@ std::shared_ptr<Move> calculate_obvious_move(const game_state_t & state)
     std::cout << "Moving visible tableau from "
       << src << "("<< state.tableau[src].cards.back().to_string() << ")"
       << " -> "
-      << dest << "(" << state.tableau[dest].cards.at(0).to_string() << ")"
-      << " to release more hidden cards\n";
+      << dest << "(";
+
+    if (state.tableau[dest].cards.size() == 0) {
+      std::cout << "<NONE>";
+    } else {
+      std::cout << state.tableau[dest].cards.at(0).to_string();
+    }
+
+    std::cout << ") to release more hidden cards\n";
 
     return make_move(
         loc_tableau(src, 0),
@@ -590,14 +598,16 @@ static game_state_t enroute_to_obvious_by_peeking(
    * other piles. This should hopefully open some way more kings to move
    * into an potentially uncover some hidden cards.
    */
-  for (int src = 0 ; src < 7 ; src++) {
+  for (int src = 6 ; src >= 0 ; src--) {
     const tableau_deck_t tbl_deck = initial_state.tableau[src];
 
-    if (tbl_deck.num_down_cards != 0 || tbl_deck.cards.size() == 0) {
+    if (tbl_deck.num_down_cards != 0
+        || tbl_deck.cards.size() == 0
+        || tbl_deck.cards[0].number == KING /* Prevents throwing KING around */
+        ) {
       continue;
     }
 
-    /* TODO(fyquah): Should really choose */
     for (int dest = 0 ; dest < 7 ; dest++) {
       if (src == dest) {
         continue;
@@ -620,6 +630,9 @@ static game_state_t enroute_to_obvious_by_peeking(
 
 game_state_t strategy_step(const game_state_t & start_state, bool *moved)
 {
+  std::cout << "Called step on " << std::endl;
+  std::cout << start_state << std::endl;
+
   /* Rule 0 to 2 (the base rules) are in the obvious_move function. */
   game_state_t state = start_state;
   std::shared_ptr<Move> move = calculate_obvious_move(state);
