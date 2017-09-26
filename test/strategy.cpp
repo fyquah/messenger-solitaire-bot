@@ -264,15 +264,28 @@ std::shared_ptr<Move> calculate_obvious_move(const game_state_t & state)
       if (i == j) {
         continue;
       }
-      card_t dest = tbl_deck[j].cards.back();
 
-      if (src.number == dest.number- 1 &&
-          suite_color(src.suite) != suite_color(dest.suite)) {
-        downcard_freeing_candidates.push_back(
-            std::make_pair(
-              tbl_deck[i].num_down_cards,
-              std::make_pair(i, j))
-        );
+      if (tbl_deck[j].cards.size() == 0) {
+
+        if (src.number == KING) {
+          downcard_freeing_candidates.push_back(
+              std::make_pair(
+                tbl_deck[i].num_down_cards,
+                std::make_pair(i, j))
+          );
+        }
+
+      } else {
+        card_t dest = tbl_deck[j].cards.back();
+  
+        if (src.number == dest.number- 1 &&
+            suite_color(src.suite) != suite_color(dest.suite)) {
+          downcard_freeing_candidates.push_back(
+              std::make_pair(
+                tbl_deck[i].num_down_cards,
+                std::make_pair(i, j))
+          );
+        }
       }
     }
   }
@@ -532,8 +545,8 @@ static game_state_t execute_path(
       loc_tableau(dest, state.tableau[dest].cards.size() - 1)
   );
   state = perform_move(state, final_move);
-
   std::cout << "Completed a successful cycle" << std::endl;
+  return state;
 }
 
 static game_state_t enroute_to_obvious_by_peeking(
