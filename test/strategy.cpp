@@ -411,6 +411,78 @@ static int find_stock_pile_position(const game_state_t & state)
   throw FindException();
 }
 
+static std::vector<std::pair<Move, card_t>> compute_foundation_path(
+        const game_state_t & state,
+        const uint32_t src,
+        bool * exists)
+{
+    const tableau_deck_t tbl_deck = state.tableau[src];
+    card_t deck_card = tbl_deck.cards[0];
+    Option<card_t> foundation_card_opt = state.foundation[deck_card.suite];
+    std::vector<std::pair<Move, card_t>> ret;
+    uint32_t foundation_pos = deck_card.suite;
+
+    /* At this point, If there is an aces, it should have been in the
+     * foundation (from the initial sweep or subsequent moves).
+     * Hence, if foundation_card is None, there is no point looking
+     * further
+     */
+    if (!foundation_card_opt.is_some()) {
+      *exists = false;
+      return ret;
+    }
+    card_t foundation_card = foundation_card_opt.get();
+    uint32_t left_in_deck[7];
+
+    for (int i = 0 ; i < 7 ; i++) {
+      left_in_deck[i] = state.tableau[i].cards.size();
+    }
+
+    for (int looking_for = foundation_card.number + 1 ;
+        looking_for < deck_card.number ;
+        looking_for++) {
+
+      for (card_t node : glob_stock_pile) {
+        if (node.number == looking_for && node.suite == deck_card.suite) {
+
+          Move move = Move(
+              loc_waste_pile(),
+              loc_foundation(foundation_pos)
+          );
+          ret.push_back(std::make_pair(move, node));
+
+          goto found;
+        }
+      }
+
+      for (int i = 0 ; i < 7 ; i++) {
+        if (i == src || left_in_deck[i] <= 0) {
+          continue;
+        }
+
+        card_t node = state.tableau[i].cards[left_in_deck[i] - 1];
+
+        if (node.number == looking_for && node.suite == deck_card.suite) {
+          Move move = Move(
+              loc_tableau(i, left_in_deck[i] - 1),
+              loc_foundation(foundation_pos));
+
+          ret.push_back(std::make_pair(move, node));
+          left_in_deck[i]--;
+
+          goto found;
+        }
+      }
+
+      *exists = false;
+      return ret;
+found:
+      continue;
+    }
+
+    return ret;
+}
+
 static std::vector<std::pair<Move, card_t>> compute_join_path(
     const game_state_t & state,
     uint32_t src_deck,
@@ -475,9 +547,7 @@ static std::vector<std::pair<Move, card_t>> compute_join_path(
     }
 
     for (int i = 0 ; i < 7 ; i++) {
-      if (i == src_deck
-          || i == dest_deck
-          || state.tableau[i].cards.size() == 0) {
+      if (i == src_deck || i == dest_deck || left_in_deck[i] <= 0) {
         continue;
       }
 
@@ -516,7 +586,7 @@ static game_state_t execute_path(
     game_state_t state,
     const std::vector<std::pair<Move, card_t>> & path,
     uint32_t src,
-    uint32_t dest
+    std::shared_ptr<Location> dest
 )
 {
   for (int i = 0 ; i < path.size() ; i++) {
@@ -550,7 +620,7 @@ static game_state_t execute_path(
 
   std::shared_ptr<Move> final_move = make_move(
       loc_tableau(src, 0),
-      loc_tableau(dest, state.tableau[dest].cards.size() - 1)
+      dest
   );
   state = perform_move(state, final_move);
   std::cout << "Completed a successful cycle" << std::endl;
@@ -587,7 +657,9 @@ static game_state_t enroute_to_obvious_by_peeking(
       if (exists) {
         std::cout << "Path exists! Executing path..." << std::endl;
         *moved = true;
-        return execute_path(initial_state, path, src, dest);
+
+        return execute_path(initial_state, path, src,
+            loc_tableau(dest, initial_state.tableau[dest].cards.size() - 1));
       } else {
         std::cout << "Path not found!" << std::endl;
       }
@@ -619,10 +691,41 @@ static game_state_t enroute_to_obvious_by_peeking(
 
       if (exists) {
         *moved = true;
-        return execute_path(initial_state, path, src, dest);
+        return execute_path(initial_state, path, src,
+            loc_tableau(dest, initial_state.tableau[dest].cards.size() - 1));
       }
     }
   }
+
+  /* Rule 3c: Eagerly promote any cards to foundation if they can
+   * immeadiately give us more new information. (this should cover
+   * the case where we need to explicitly promote deuce).
+   */
+  for (int src = 0 ; src < 7 ; src++) {
+    const tableau_deck_t tbl_deck = initial_state.tableau[src];
+
+    if (tbl_deck.num_down_cards == 0 || tbl_deck.cards.size() != 1) {
+      continue;
+    }
+
+    card_t deck_card = tbl_deck.cards[0];
+    Option<card_t> foundation_card = initial_state.foundation[deck_card.suite];
+    bool exists;
+
+    std::vector<std::pair<Move, card_t>> auxilary_path =
+      compute_foundation_path(initial_state, src, &exists);
+
+    if (exists) {
+      *moved = true;
+      return execute_path(initial_state, auxilary_path, src,
+          loc_foundation(deck_card.suite));
+    }
+  }
+
+  /* Rule XX: At the point of desperation. Just play anything that
+   * increases the foundation piles' size. (At this point, we are probably
+   * going to lose anyway ...)
+   */
 
   *moved = false;
   return initial_state;
