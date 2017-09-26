@@ -33,6 +33,17 @@ static void drag_mouse(
   usleep(200000);
 }
 
+static void unsafe_remove_card_from_visible_pile(game_state_t * state)
+{
+  state->remaining_pile_size = state->remaining_pile_size - 1;
+
+  if (state->remaining_pile_size == state->stock_pile_size) {
+    state->waste_pile_top = Option<card_t>();
+  } else {
+    state->waste_pile_top = Option<card_t>(recognize_visible_pile_card());
+  }
+}
+
 void interact_init(robot_h r)
 {
   robot = r;
@@ -123,7 +134,18 @@ static bool is_transfer_legal(
   } else {
     return false;
   }
+}
 
+static bool is_promote_to_foundation_legal(
+    const Option<card_t> foundation,
+    const card_t & card)
+{
+  return (
+      (!foundation.is_some() && card.number == ACE)
+      || (foundation.is_some()
+          && foundation.get().suite == card.suite
+          && foundation.get().suite == card.number - 1)
+  );
 }
 
 game_state_t move_from_visible_pile_to_tableau(
@@ -163,14 +185,41 @@ game_state_t move_from_visible_pile_to_tableau(
   next_state.tableau[deck].cards.push_back(waste_pile_top);
 
   /* See the new card in the pile */
-  next_state.remaining_pile_size = state.remaining_pile_size - 1;
-
-  if (next_state.remaining_pile_size == state.stock_pile_size) {
-    next_state.waste_pile_top = Option<card_t>();
-  } else {
-    next_state.waste_pile_top = Option<card_t>(recognize_visible_pile_card());
-  }
-
+  unsafe_remove_card_from_visible_pile(&next_state);
 
   return next_state;
 }
+
+game_state_t move_from_visible_pile_to_foundation(
+    const game_state_t & state,
+    const uint32_t foundation_pos
+)
+{
+  if (!state.waste_pile_top.is_some()) {
+    throw IllegalMoveException();
+  }
+
+  const Option<card_t> & foundation = state.foundation[foundation_pos];
+  const card_t & waste_pile_top = state.waste_pile_top.get();
+
+  if (!is_promote_to_foundation_legal(foundation, waste_pile_top)) {
+    throw IllegalMoveException();
+  }
+
+  std::pair<uint32_t, uint32_t> from = std::make_pair(
+      VISIBLE_PILE.first + CARD_WIDTH / 2 ,
+      VISIBLE_PILE.second + CARD_HEIGHT / 2
+  );
+  std::pair<uint32_t, uint32_t> to = std::make_pair(
+      FOUNDATION_DECKS[foundation_pos].first + CARD_WIDTH / 2 ,
+      FOUNDATION_DECKS[foundation_pos].second + CARD_HEIGHT / 2
+  );
+  drag_mouse(from, to);
+
+  game_state_t next_state = state;
+  next_state.foundation[foundation_pos] = Option<card_t>(waste_pile_top);
+  unsafe_remove_card_from_visible_pile(&next_state);
+
+  return next_state;
+}
+

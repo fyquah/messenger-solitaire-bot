@@ -23,6 +23,10 @@ const auto FOUNDATION_DECK_0 = std::make_pair(40,  152);
 const auto FOUNDATION_DECK_1 = std::make_pair(110, 152);
 const auto FOUNDATION_DECK_2 = std::make_pair(180, 152);
 const auto FOUNDATION_DECK_3 = std::make_pair(250, 152);
+const std::pair<uint32_t, uint32_t> FOUNDATION_DECKS[] =
+  { FOUNDATION_DECK_0, FOUNDATION_DECK_1, FOUNDATION_DECK_2,
+    FOUNDATION_DECK_3
+  };
 const auto DRAW_PILE = std::make_pair(461, 152);
 const auto VISIBLE_PILE = std::make_pair(355, 152);
 const auto TABLEAU = std::make_pair(40, 263);

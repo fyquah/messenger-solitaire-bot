@@ -26,10 +26,11 @@ int entry_point(int argc, const char *argv[])
   tableau_position_t pos = { .deck = 2, .num_hidden = 2, .position = 3 };
   game_state_t game_state = load_initial_game_state();
   card_t c;
-  c.number = EIGHT;
+  c.number = ACE;
   c.suite = DIAMOND;
+  game_state.stock_pile_size = 21;
   game_state.waste_pile_top = Option<card_t>(c);
-  game_state = move_from_visible_pile_to_tableau(game_state, 2);
+  game_state = move_from_visible_pile_to_foundation(game_state, 2);
 
   std::cout << game_state << std::endl;
   robot_free(robot);
