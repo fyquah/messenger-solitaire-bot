@@ -278,12 +278,12 @@ std::shared_ptr<Move> calculate_obvious_move(const game_state_t & state)
   }
 
   if (downcard_freeing_candidates.size() != 0) {
-    const auto & p = *std::max_element(
+    const auto p = std::max_element(
         downcard_freeing_candidates.begin(),
         downcard_freeing_candidates.end()
     );
-    uint32_t src = p.second.first;
-    uint32_t dest = p.second.second;
+    uint32_t src = p->second.first;
+    uint32_t dest = p->second.second;
 
     std::cout << "Moving visible tableau from "
       << src << "("<< state.tableau[src].cards.back().to_string() << ")"
@@ -491,6 +491,51 @@ found:
   return ret;
 }
 
+static game_state_t execute_path(
+    game_state_t state,
+    const std::vector<std::pair<Move, card_t>> & path,
+    uint32_t src,
+    uint32_t dest
+)
+{
+  for (int i = 0 ; i < path.size() ; i++) {
+    Move move = path[i].first;
+    card_t card = path[i].second;
+
+    std::cout << "  Step " << i << ": " << move << " "  << card.to_string()
+      << std::endl;
+
+    if (move.from.get()->tag() == LOC_WASTE_PILE) {
+      while (true) {
+
+        if (!state.waste_pile_top.is_some()) {
+          state = draw_from_stock_pile(state);
+
+        } else if (state.waste_pile_top.get() == card) {
+          break;
+
+        } else if (state.stock_pile_size == 0) {
+          state = reset_stock_pile(state);
+
+        } else {
+          state = draw_from_stock_pile(state);
+        }
+      }
+    }
+
+    update_glob_stock_pile(state, move);
+    state = perform_move(state, std::make_shared<Move>(move));
+  }
+
+  std::shared_ptr<Move> final_move = make_move(
+      loc_tableau(src, 0),
+      loc_tableau(dest, state.tableau[dest].cards.size() - 1)
+  );
+  state = perform_move(state, final_move);
+
+  std::cout << "Completed a successful cycle" << std::endl;
+}
+
 static game_state_t enroute_to_obvious_by_peeking(
     const game_state_t & initial_state,
     bool *moved
@@ -500,7 +545,7 @@ static game_state_t enroute_to_obvious_by_peeking(
   /* Rule 3a: Try to artifically move one deck to another using the help
    * of the wasted pile.
    */
-  for (int src = 0 ; src < 7 ; src++) {
+  for (int src = 6; src >= 0 ; src--) {
     if (initial_state.tableau[src].num_down_cards == 0) {
       continue;
     }
@@ -519,49 +564,39 @@ static game_state_t enroute_to_obvious_by_peeking(
           initial_state, src, dest, &exists);
 
       if (exists) {
-        std::cout << "Path exists!" << std::endl;
-        game_state_t state = initial_state;
-
-        for (int i = 0 ; i < path.size() ; i++) {
-          Move move = path[i].first;
-          card_t card = path[i].second;
-
-          std::cout << "  Step " << i << ": " << move << " "  << card.to_string()
-            << std::endl;
-
-          if (move.from.get()->tag() == LOC_WASTE_PILE) {
-            std::cout << "HERE" << std::endl;
-            while (true) {
-
-              if (!state.waste_pile_top.is_some()) {
-                state = draw_from_stock_pile(state);
-
-              } else if (state.waste_pile_top.get() == card) {
-                break;
-
-              } else if (state.stock_pile_size == 0) {
-                state = reset_stock_pile(state);
-
-              } else {
-                state = draw_from_stock_pile(state);
-              }
-            }
-          }
-
-          update_glob_stock_pile(state, move);
-          state = perform_move(state, std::make_shared<Move>(move));
-        }
-
-        std::shared_ptr<Move> final_move = make_move(
-            loc_tableau(src, 0),
-            loc_tableau(dest, state.tableau[dest].cards.size() - 1)
-        );
-        state = perform_move(state, final_move);
-
+        std::cout << "Path exists! Executing path..." << std::endl;
         *moved = true;
-        return state;
+        return execute_path(initial_state, path, src, dest);
       } else {
         std::cout << "Path not found!" << std::endl;
+      }
+    }
+  }
+
+  /* Rule 3b: Any pile that contains only visible cards are moved to
+   * other piles. This should hopefully open some way more kings to move
+   * into an potentially uncover some hidden cards.
+   */
+  for (int src = 0 ; src < 7 ; src++) {
+    const tableau_deck_t tbl_deck = initial_state.tableau[src];
+
+    if (tbl_deck.num_down_cards != 0 || tbl_deck.cards.size() == 0) {
+      continue;
+    }
+
+    /* TODO(fyquah): Should really choose */
+    for (int dest = 0 ; dest < 7 ; dest++) {
+      if (src == dest) {
+        continue;
+      }
+
+      bool exists;
+      std::vector<std::pair<Move, card_t>> path = compute_join_path(
+          initial_state, src, dest, &exists);
+
+      if (exists) {
+        *moved = true;
+        return execute_path(initial_state, path, src, dest);
       }
     }
   }
