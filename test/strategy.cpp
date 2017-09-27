@@ -418,10 +418,17 @@ static std::vector<std::pair<Move, card_t>> compute_foundation_path(
         const uint32_t src,
         bool * exists)
 {
-    const tableau_deck_t tbl_deck = state.tableau[src];
-    card_t deck_card = tbl_deck.cards[0];
-    Option<card_t> foundation_card_opt = state.foundation[deck_card.suite];
     std::vector<std::pair<Move, card_t>> ret;
+    const tableau_deck_t tbl_deck = state.tableau[src];
+
+    if (tbl_deck.cards.size() == 0) {
+      *exists = false;
+      return ret;
+    }
+
+
+    card_t deck_card = tbl_deck.cards.back();
+    Option<card_t> foundation_card_opt = state.foundation[deck_card.suite];
     uint32_t foundation_pos = deck_card.suite;
 
     /* At this point, If there is an aces, it should have been in the
@@ -439,6 +446,9 @@ static std::vector<std::pair<Move, card_t>> compute_foundation_path(
     for (int i = 0 ; i < 7 ; i++) {
       left_in_deck[i] = state.tableau[i].cards.size();
     }
+
+    std::cout << "Computing foundation path to " << deck_card.to_string()
+      << "\n";
 
     for (int looking_for = foundation_card.number + 1 ;
         looking_for < deck_card.number ;
@@ -476,11 +486,14 @@ static std::vector<std::pair<Move, card_t>> compute_foundation_path(
         }
       }
 
+      std::cout << "It cannot be found." << std::endl;
       *exists = false;
       return ret;
 found:
       continue;
     }
+
+    std::cout << "It exists!" << std::endl;
 
     *exists = true;
     return ret;
