@@ -1,13 +1,20 @@
 #ifndef INTERACT_HPP
 #define INTERACT_HPP
 
+#include <string>
 #include <exception>
 
 #include <robot.h>
 
 #include "game.hpp"
 
-class IllegalMoveException : public std::exception {};
+class IllegalMoveException : public std::exception {
+private:
+  std::string msg;
+public:
+  IllegalMoveException(std::string msg);
+  virtual const char* what() const throw ();
+};
 class InconsistentArgument : public std::exception {};
 
 void interact_init(robot_h robot);

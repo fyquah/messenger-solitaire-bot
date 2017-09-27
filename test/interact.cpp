@@ -9,6 +9,13 @@
 static bool sandbox = false;
 static robot_h robot;
 
+IllegalMoveException::IllegalMoveException(std::string msg) : msg(msg) {}
+
+const char * IllegalMoveException::what() const throw()
+{
+  return msg.c_str();
+}
+
 static void click_card(uint32_t x, uint32_t y)
 {
   robot_mouse_move(robot, x, y);
@@ -120,7 +127,8 @@ game_state_t draw_from_stock_pile(const game_state_t & state)
   game_state_t next_state = state;
 
   if (state.stock_pile_size <= 0) {
-    throw IllegalMoveException();
+    throw IllegalMoveException(
+        "Cannot draw from stock pile when stock pile size is <= 0");
   }
 
   click_card(
@@ -139,7 +147,8 @@ game_state_t reset_stock_pile(const game_state_t & state)
   game_state_t next_state = state;
 
   if (state.stock_pile_size != 0) {
-    throw IllegalMoveException();
+    throw IllegalMoveException(
+        "Cannot reset stock pile when stock_pile_size != 0");
   }
 
   click_card(
@@ -188,14 +197,17 @@ game_state_t move_from_visible_pile_to_tableau(
 )
 {
   if (!state.waste_pile_top.is_some()) {
-    throw IllegalMoveException();
+    throw IllegalMoveException(
+        "waste pile is missing. Cannot move to tableau."
+    );
   }
 
   const card_t & waste_pile_top = state.waste_pile_top.get();
   const tableau_deck_t & tableau_deck = state.tableau[deck];
 
   if (!is_transfer_legal(waste_pile_top, tableau_deck)) {
-    throw IllegalMoveException();
+    throw IllegalMoveException(
+        "Intended transfer from waste pile to tableau is illegal");
   }
 
   /* Dragging the card in the game */
@@ -222,14 +234,15 @@ game_state_t move_from_visible_pile_to_foundation(
 )
 {
   if (!state.waste_pile_top.is_some()) {
-    throw IllegalMoveException();
+    throw IllegalMoveException("Missing visible pile to to move to foundation");
   }
 
   const Option<card_t> & foundation = state.foundation[foundation_pos];
   const card_t & waste_pile_top = state.waste_pile_top.get();
 
   if (!is_promote_to_foundation_legal(foundation, waste_pile_top)) {
-    throw IllegalMoveException();
+    throw IllegalMoveException(
+        "Intended promotion from waste pile to foundation is illegal");
   }
 
   std::pair<uint32_t, uint32_t> from = std::make_pair(
@@ -258,14 +271,16 @@ game_state_t move_from_tableau_to_foundation(
   const tableau_deck_t & tbl_deck = state.tableau[tableau_position];
 
   if (tbl_deck.cards.size() == 0) {
-    throw IllegalMoveException();
+    throw IllegalMoveException(
+        "No cards in tableau to move to foundation.");
   }
 
   const Option<card_t> & foundation = state.foundation[foundation_position];
   const card_t & foundation_bound = tbl_deck.cards.back();
 
   if (!is_promote_to_foundation_legal(foundation, foundation_bound)) {
-    throw IllegalMoveException();
+    throw IllegalMoveException(
+        "Intended promotion from tableau to foundation is illegal");
   }
 
   std::pair<uint32_t, uint32_t> from = get_end_card_position(
@@ -299,7 +314,7 @@ game_state_t move_from_column_to_column(
 
   if (position.position >= src_deck.cards.size()
       || !is_transfer_legal(src_deck.cards[position.position], dest_deck)) {
-    throw IllegalMoveException();
+    throw IllegalMoveException("Transfer is illegal");
   }
 
   std::pair<uint32_t, uint32_t> from = std::make_pair(
