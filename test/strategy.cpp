@@ -484,6 +484,25 @@ found:
     return ret;
 }
 
+static bool check_transitive_join_compatability(card_t from, card_t to)
+{
+  if (to.number <= from.number) {
+    return false;
+  }
+
+  if (((to.number - from.number % 2) == 0)
+      && suite_color(from.suite) != suite_color(to.suite)) {
+    return false;
+  }
+
+  if (((to.number - from.number) % 2 == 1)
+      && suite_color(from.suite) == suite_color(to.suite)) {
+    return false;
+  }
+
+  return true;
+}
+
 static std::vector<std::pair<Move, card_t>> compute_join_path(
     const game_state_t & state,
     uint32_t src_deck,
@@ -491,12 +510,17 @@ static std::vector<std::pair<Move, card_t>> compute_join_path(
     /* output */ bool *ptr_exists
 )
 {
+  std::cout
+    << "Computing join path from deck "
+    << src_deck << " to deck "
+    << dest_deck << std::endl;
   const card_t src = state.tableau[src_deck].cards.at(0);
   const Option<card_t> dest =
     (state.tableau[dest_deck].cards.size() == 0)
     ? Option<card_t>()
     : Option<card_t>(state.tableau[dest_deck].cards.back())
   ;
+  bool special_first_elem = false;
   std::vector<std::pair<Move, card_t>> ret;
   int left_in_deck[7];
 
@@ -522,7 +546,58 @@ static std::vector<std::pair<Move, card_t>> compute_join_path(
     left_in_deck[i] = state.tableau[i].cards.size();
   }
 
-  const uint32_t limit = dest.is_some() ? dest.get().number - 1 : KING;
+  uint32_t limit;
+
+  if (dest.is_some()) {
+    limit = dest.get().number - 1;
+
+  } else {
+    bool found = false;
+
+    /* Prefer building for existing stacks simply because it is more likely
+     * to be complete.
+     */
+
+    for (int i = 0 ; i < 7 ; i++) {
+      if (i == dest_deck) {
+        continue;
+      }
+
+      if (state.tableau[i].cards.size() == 0
+          || state.tableau[i].cards[0].number != KING) {
+        continue;
+      }
+
+      if (!check_transitive_join_compatability(src, state.tableau[i].cards[0])) {
+        continue;
+      }
+
+      if (state.tableau[i].cards.back().number <= src.number) {
+        continue;
+      }
+
+      found = true;
+
+      /* second element of pair here really desn't matter ... */
+      ret.push_back(
+          std::make_pair(
+            Move(loc_tableau(i, 0), loc_tableau(dest_deck, 0)),
+            state.tableau[i].cards[0])
+      );
+      limit = uint32_t(state.tableau[i].cards.back().number) - 1;
+      special_first_elem = true;
+      std::cout << "Special continuation limit = " << limit << std::endl;
+      found = true;
+      break;
+    }
+
+    /* This will automatically find a continuation for [QUEEN], and hence
+     * looks up the stack pile for a KING.
+     */
+    if (!found) {
+      limit = KING;
+    }
+  }
 
   for (card_t start = src; uint32_t(start.number) < limit; ) {
 
@@ -579,7 +654,11 @@ found:
   }
 
   *ptr_exists = true;
-  std::reverse(ret.begin(), ret.end());
+  if (special_first_elem) {
+    std::reverse(ret.begin() + 1, ret.end());
+  } else {
+    std::reverse(ret.begin(), ret.end());
+  }
   return ret;
 }
 
@@ -766,9 +845,6 @@ static game_state_t enroute_to_obvious_by_peeking(
 
 game_state_t strategy_step(const game_state_t & start_state, bool *moved)
 {
-  std::cout << "Called step on " << std::endl;
-  std::cout << start_state << std::endl;
-
   /* Rule 0 to 2 (the base rules) are in the obvious_move function. */
   game_state_t state = start_state;
   std::shared_ptr<Move> move = calculate_obvious_move(state);
@@ -787,6 +863,10 @@ game_state_t strategy_step(const game_state_t & start_state, bool *moved)
     return state;
   }
 
+  std::cout << "DID NOT MOVE!" << std::endl;
+  for (card_t c : glob_stock_pile) {
+    std::cout << "- " << c.to_string() << "\n";
+  }
   *moved = false;
   return state;
 }
