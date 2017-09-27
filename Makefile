@@ -17,7 +17,8 @@ ifeq ($(UNAME_S),Linux)
 	CXXFLAGS += $(CFLAGS) -std=c++11
 	ROBOT_LIB=librobot.so
 	PROGRAM_LIB=libprogram.so
-	CC=gcc
+	CXX=g++-5
+	CC=gcc-5
 	OS=linux
 endif
 
@@ -51,4 +52,5 @@ undo: $(PROGRAM_LIB) $(ROBOT_LIB) $(ENTRY_POINT)
 
 
 clean:
-	rm -f $(PROGRAM_LIB) $(ROBOT_LIB) src/robot.o src/entry_point.o test/main.o
+	rm -f $(PROGRAM_LIB) $(ROBOT_LIB) src/robot.o src/entry_point.o test/main.o ./test/interact.o ./test/strategy.o ./test/game.o ./test/vision.o
+

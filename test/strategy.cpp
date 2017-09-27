@@ -1,3 +1,5 @@
+#include <unistd.h>
+#include <assert.h>
 #include <algorithm>
 #include <memory>
 #include <vector>
@@ -503,6 +505,14 @@ static bool check_transitive_join_compatability(card_t from, card_t to)
   return true;
 }
 
+static bool check_join_compatability(card_t from, card_t to)
+{
+  return (
+      to.number == from.number + 1
+      && suite_color(to.suite) != suite_color(from.suite)
+  );
+}
+
 static std::vector<std::pair<Move, card_t>> compute_join_path(
     const game_state_t & state,
     uint32_t src_deck,
@@ -679,6 +689,8 @@ static game_state_t execute_path(
     if (move.from.get()->tag() == LOC_WASTE_PILE) {
       while (true) {
 
+        std::cout << "State = " << state << std::endl;
+
         if (!state.waste_pile_top.is_some()) {
           state = draw_from_stock_pile(state);
 
@@ -712,10 +724,10 @@ static game_state_t enroute_to_obvious_by_peeking(
     bool *moved
 )
 {
-
   /* Rule 3a: Try to artifically move one deck to another using the help
    * of the wasted pile.
    */
+  std::cout << "Executing Rule 3(a)" << std::endl;
   for (int src = 6; src >= 0 ; src--) {
     if (initial_state.tableau[src].num_down_cards == 0) {
       continue;
@@ -750,6 +762,7 @@ static game_state_t enroute_to_obvious_by_peeking(
    * other piles. This should hopefully open some way more kings to move
    * into an potentially uncover some hidden cards.
    */
+  std::cout << "Executing Rule 3(b)" << std::endl;
   for (int src = 6 ; src >= 0 ; src--) {
     const tableau_deck_t tbl_deck = initial_state.tableau[src];
 
@@ -771,8 +784,10 @@ static game_state_t enroute_to_obvious_by_peeking(
 
       if (exists) {
         *moved = true;
-        return execute_path(initial_state, path, src,
+        game_state_t state = execute_path(initial_state, path, src,
             loc_tableau(dest, initial_state.tableau[dest].cards.size() - 1));
+        std::cout << "Made a move with Rule 3(b)" << std::endl;
+        return state;
       }
     }
   }
@@ -781,6 +796,7 @@ static game_state_t enroute_to_obvious_by_peeking(
    * immeadiately give us more new information. (this should cover
    * the case where we need to explicitly promote deuce).
    */
+  std::cout << "Executing Rule 3(c)" << std::endl;
   std::cout << "Attempting lazy promotion!" << std::endl;
   for (int src = 0 ; src < 7 ; src++) {
     const tableau_deck_t tbl_deck = initial_state.tableau[src];
@@ -807,15 +823,54 @@ static game_state_t enroute_to_obvious_by_peeking(
     }
   }
 
+  /* Rule 3d: Bring any card from visible deck down to the tableau
+   */
+  std::cout << "Executing Rule 3(d)" << std::endl;
+  for (card_t card : glob_stock_pile) {
+    game_state_t state = initial_state;
+
+    for (int i = 0 ; i < 7 ; i++) {
+      if (state.tableau[i].cards.size() == 0) {
+        continue;
+      }
+
+      if (check_join_compatability(card, state.tableau[i].cards.back())) {
+
+        while (true) {
+
+          if (!state.waste_pile_top.is_some()) {
+            state = draw_from_stock_pile(state);
+
+          } else if (state.waste_pile_top.get() == card) {
+            break;
+
+          } else if (state.stock_pile_size == 0) {
+            state = reset_stock_pile(state);
+
+          } else {
+            state = draw_from_stock_pile(state);
+          }
+        }
+
+        glob_stock_pile.erase(
+            std::remove(
+              glob_stock_pile.begin(),
+              glob_stock_pile.end(),
+              card),
+            glob_stock_pile.end());
+        *moved = true;
+        return move_from_visible_pile_to_tableau(state, i);
+      }
+    }
+  }
+
   /* Rule XX: At the point of desperation. Just play anything that
    * increases the foundation piles' size. (At this point, we are probably
    * going to lose anyway ...)
    */
-
-  std::cout << "Attempting lazy promotion!" << std::endl;
+  std::cout << "Attempting eager promotion!" << std::endl;
   for (int src = 0 ; src < 7 ; src++) {
     const tableau_deck_t tbl_deck = initial_state.tableau[src];
-
 
     /* We do not skip if [tbl_deck.num_down_cards == 0]. It might open up
      * space for King cards.
@@ -859,14 +914,14 @@ static game_state_t strategy_wrap_up(game_state_t state)
   /* Try to use all existing cards */
   int cycle = state.remaining_pile_size + 1;
 
-  while (cycle && state.remaining_pile_size != 0) {
-
+  {
     /* try to play the card */
+here:
     if (state.waste_pile_top.is_some()) {
       card_t card = state.waste_pile_top.get();
 
       for (int i = 0 ; i < 7 ; i++) {
-        const auto & vec = state.tableau[i].cards;
+        auto vec = state.tableau[i].cards;
 
         if (vec.size() == 0) {
           if (card.number == KING) {
@@ -877,6 +932,7 @@ static game_state_t strategy_wrap_up(game_state_t state)
                   glob_stock_pile.end(),
                   card),
                 glob_stock_pile.end());
+            break;
           }
         } else {
           if (suite_color(card.suite) != suite_color(vec.back().suite)
@@ -888,12 +944,16 @@ static game_state_t strategy_wrap_up(game_state_t state)
                   glob_stock_pile.end(),
                   card),
                 glob_stock_pile.end());
+            break;
           }
         }
       }
     }
 
+    std::cout << state << std::endl;
+
     if (state.remaining_pile_size != 0) {
+
       if (state.stock_pile_size == 0) {
         state = reset_stock_pile(state);
       } else {
@@ -902,6 +962,10 @@ static game_state_t strategy_wrap_up(game_state_t state)
     }
 
     cycle -= 1;
+
+    if (cycle > 0 && state.remaining_pile_size != 0)  {
+      goto here;
+    }
   }
 
   /* Transfer stacks that don't start with King to other stacks. */
@@ -911,9 +975,8 @@ static game_state_t strategy_wrap_up(game_state_t state)
     for (int i = 0 ; i < 7 ; i++) {
       const auto & cards = state.tableau[i].cards;
 
-
       if (cards.size() != 0 && cards[0].number != KING) {
-      std::cout << "I should do something about " << i << std::endl;
+        std::cout << "I should do something about " << i << std::endl;
         all_starts_with_king = false;
 
         for (int j = 0 ; j < 7 ; j++) {
@@ -938,8 +1001,6 @@ static game_state_t strategy_wrap_up(game_state_t state)
           state = perform_move(state, move);
           break;
         }
-
-        break;
       }
     }
 
@@ -992,27 +1053,42 @@ static game_state_t strategy_actually_finish_game(const game_state_t & state)
   }
 }
 
+static game_state_t do_wrap_up_work(game_state_t state)
+{
+  for (const card_t card : glob_stock_pile) {
+    std::cout << card.to_string() << ", ";
+  }
+  std::cout << std::endl;
+    std::cout << "Wrap up iter 0" << std::endl;
+    state = strategy_wrap_up(state);
+    std::cout << "Wrap up iter 1" << std::endl;
+    state = strategy_wrap_up(state);
+    std::cout << "Wrap up iter 2" << std::endl;
+    state = strategy_wrap_up(state);
+    assert(false);
+    return state;
+}
+
+game_state_t strategy_term(game_state_t state) {
+
+  if (no_hidden_cards_left(state)) {
+    state = do_wrap_up_work(state);
+
+    while (!is_game_finisished(state)) {
+      state = strategy_actually_finish_game(state);
+    }
+  }
+
+  return state;
+}
+
 game_state_t strategy_step(const game_state_t & start_state, bool *moved)
 {
   std::cout << start_state << std::endl;
 
   if (no_hidden_cards_left(start_state)) {
-    *moved = false;  /* TODO(fyquah): This is a hack to force program
-                        termination. */
-
-    std::cout << "WRAPING UP!" << std::endl;
-    game_state_t state = start_state;
-
-    for (int i = 0 ; i < 10 ; i++) {
-      state = strategy_wrap_up(state);
-    }
-    std::cout << "Wrapped up!" << std::endl;
-
-    /* Finishing game */
-    while (!is_game_finisished(state)) {
-      state = strategy_actually_finish_game(state);
-    }
-    return state;
+    *moved = false;
+    return start_state;
   }
 
   /* Rule 0 to 2 (the base rules) are in the obvious_move function. */
@@ -1021,7 +1097,8 @@ game_state_t strategy_step(const game_state_t & start_state, bool *moved)
 
   if (move != NULL) {
     *moved = true;
-    update_glob_stock_pile(state, *move.get());
+    Move move_object = *move.get();
+    update_glob_stock_pile(state, move_object);
     return perform_move(state, move);
   }
 
@@ -1029,7 +1106,9 @@ game_state_t strategy_step(const game_state_t & start_state, bool *moved)
    * by looking at the stock_pile to try to do rule rule 0 to 2.
    */
   state = enroute_to_obvious_by_peeking(state, moved);
+  std::cout << "Rule 3 : moved = " << *moved << std::endl;
   if (*moved) {
+    *moved = true;
     return state;
   }
 

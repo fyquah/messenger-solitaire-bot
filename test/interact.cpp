@@ -42,6 +42,12 @@ static void drag_mouse(
 
 static void unsafe_remove_card_from_visible_pile(game_state_t *state)
 {
+  std::cout << "Unsafe operation! Original remaining pile size = "
+    << state->remaining_pile_size
+    << " original stock pile size = "
+    << state->stock_pile_size
+    << std::endl;
+
   state->remaining_pile_size = state->remaining_pile_size - 1;
 
   if (state->remaining_pile_size == state->stock_pile_size) {
@@ -199,6 +205,7 @@ game_state_t move_from_visible_pile_to_tableau(
     const uint32_t deck
 )
 {
+  std::cout << "Moving from visible pile to tableau" << std::endl;
   if (!state.waste_pile_top.is_some()) {
     throw IllegalMoveException(
         "waste pile is missing. Cannot move to tableau."
@@ -318,7 +325,9 @@ game_state_t move_from_column_to_column(
 
   if (position.position >= src_deck.cards.size()
       || !is_transfer_legal(src_deck.cards[position.position], dest_deck)) {
-    throw IllegalMoveException("Transfer is illegal");
+    throw IllegalMoveException(
+        "Transfer is from deck a to a illegal"
+    );
   }
 
   std::pair<uint32_t, uint32_t> from = std::make_pair(

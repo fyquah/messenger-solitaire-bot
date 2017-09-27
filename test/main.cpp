@@ -26,12 +26,13 @@ int entry_point(int argc, const char *argv[])
   interact_init(robot);
 
   game_state_t game_state = load_initial_game_state();
-  bool moved;
 
   std::cout << "Initial state = " << game_state << std::endl;
 
   try {
     game_state = strategy_init(game_state);
+    bool moved;
+
     do {
       game_state = strategy_step(game_state, &moved);
     } while(moved);
@@ -39,8 +40,13 @@ int entry_point(int argc, const char *argv[])
 
   }
 
+  std::cout << "Wrapping up " << game_state << std::endl;
+  game_state = strategy_term(game_state);
+
   std::cout << "I AM DONE (not sure if i won the game)" << std::endl;
+  std::cout << "Strategy internal state:" << std::endl;
   strategy_print_internal_state();
+  std::cout << "Game state: " << std::endl;
   std::cout << game_state << "\n";
 
   robot_mouse_move(robot, 2000, 100);
