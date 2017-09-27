@@ -1080,6 +1080,7 @@ static game_state_t strategy_actually_finish_game(const game_state_t & state)
     card_t card = state.tableau[i].cards.back();
 
     if (is_promote_to_foundation_legal(state.foundation[card.suite], card)) {
+      std::cout << "Promoting " << card.to_string() << "\n";
       return move_from_tableau_to_foundation(state, i, card.suite);
     }
   }
