@@ -543,7 +543,6 @@ static std::vector<std::pair<Move, card_t>> compute_join_path(
     ? Option<card_t>()
     : Option<card_t>(state.tableau[dest_deck].cards.back())
   ;
-  bool special_first_elem = false;
   std::vector<std::pair<Move, card_t>> ret;
   int left_in_deck[7];
 
@@ -620,7 +619,6 @@ static std::vector<std::pair<Move, card_t>> compute_join_path(
             state.tableau[i].cards[0])
       );
       limit = uint32_t(state.tableau[i].cards.back().number) - 1;
-      special_first_elem = true;
       std::cout << "Special continuation limit = " << limit << std::endl;
       found = true;
       break;
@@ -634,13 +632,22 @@ static std::vector<std::pair<Move, card_t>> compute_join_path(
     }
   }
 
-  for (card_t start = src; uint32_t(start.number) < limit; ) {
+  for (uint32_t tail = limit ; tail > src.number  ; ) {
 
-    std::cout << "=> Looking for continuation for " << start.to_string() << "\n";
+    std::cout
+      << "=> Looking for pile of cards covering at "
+      << tail
+      << " for something ("
+      << src.number << ", " << limit
+      << ") running from deck "
+      << src_deck
+      << " to deck "
+      << dest_deck
+      << std::endl;
 
     for (card_t node : glob_stock_pile) {
-      if (node.number == start.number + 1
-          && suite_color(node.suite) != suite_color(start.suite)) {
+      if (node.number == tail
+          && check_transitive_join_compatability(src, node)) {
 
         Move move = Move(
             loc_waste_pile(),
@@ -653,6 +660,7 @@ static std::vector<std::pair<Move, card_t>> compute_join_path(
 
         std::cout << "---> Found in deck\n";
 
+        tail --;
         goto found;
       }
     }
@@ -662,38 +670,40 @@ static std::vector<std::pair<Move, card_t>> compute_join_path(
         continue;
       }
 
-      card_t node = state.tableau[i].cards[left_in_deck[i] - 1];
+      for (int j = 0 ; j < left_in_deck[j] ; j++) {
 
-      if (node.number == start.number + 1
-          && suite_color(node.suite) != suite_color(start.suite)) {
-        Move move = Move(
-            loc_tableau(i, left_in_deck[i] - 1),
+        card_t node = state.tableau[i].cards[j];
 
-            /* TODO(fyquah): Shouldn't really matter to have a random
-             * subindex here. But it sure is inelegant.
-             */
-            loc_tableau(dest_deck, 0));
+        if (node.number == tail
+            && check_transitive_join_compatability(src, node)
+            && state.tableau[i].cards[left_in_deck[i] - 1].number > src.number) {
 
-        ret.push_back(std::make_pair(move, node));
-        left_in_deck[i]--;
+          Move move = Move(
+              loc_tableau(i, j),
+  
+              /* TODO(fyquah): Shouldn't really matter to have a random
+               * subindex here. But it sure is inelegant.
+               */
+              loc_tableau(dest_deck, 0)
+          );
+  
+          ret.push_back(std::make_pair(move, node));
+          tail = state.tableau[i].cards[left_in_deck[i] - 1].number - 1;
+          left_in_deck[i] = j; 
 
-        std::cout << "---> Found in tableau " << i << '\n';
-        goto found;
+          std::cout << "---> Found in tableau " << i << '\n';
+          goto found;
+        }
       }
     }
 
     *ptr_exists = false;
     return ret;
 found:
-    start = ret.back().second;
+    continue;
   }
 
   *ptr_exists = true;
-  if (special_first_elem) {
-    std::reverse(ret.begin() + 1, ret.end());
-  } else {
-    std::reverse(ret.begin(), ret.end());
-  }
   return ret;
 }
 
@@ -1103,7 +1113,6 @@ game_state_t strategy_term(game_state_t state) {
 
   if (no_hidden_cards_left(state)) {
     state = do_wrap_up_work(state);
-
 
     while (!is_game_finisished(state)) {
       state = strategy_actually_finish_game(state);
