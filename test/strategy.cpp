@@ -505,7 +505,7 @@ static bool check_transitive_join_compatability(card_t from, card_t to)
     return false;
   }
 
-  if (((to.number - from.number % 2) == 0)
+  if ((((to.number - from.number) % 2) == 0)
       && suite_color(from.suite) != suite_color(to.suite)) {
     return false;
   }
@@ -670,9 +670,14 @@ static std::vector<std::pair<Move, card_t>> compute_join_path(
         continue;
       }
 
-      for (int j = 0 ; j < left_in_deck[j] ; j++) {
+      for (int j = 0 ; j < left_in_deck[i] ; j++) {
 
         card_t node = state.tableau[i].cards[j];
+
+        std::cout << "Src = " << src.to_string()
+          << "node = " << node.to_string()
+          << " | Left in deck = " << left_in_deck[i]
+          << std::endl;
 
         if (node.number == tail
             && check_transitive_join_compatability(src, node)
@@ -723,9 +728,6 @@ static game_state_t execute_path(
 
     if (move.from.get()->tag() == LOC_WASTE_PILE) {
       while (true) {
-
-        std::cout << "State = " << state << std::endl;
-
         if (!state.waste_pile_top.is_some()) {
           state = draw_from_stock_pile(state);
 
@@ -788,7 +790,8 @@ static game_state_t enroute_to_obvious_by_peeking(
         return execute_path(initial_state, path, src,
             loc_tableau(dest, initial_state.tableau[dest].cards.size() - 1));
       } else {
-        std::cout << "Path not found!" << std::endl;
+        std::cout << "Path not found for "
+          << src << " " << dest << std::endl;
       }
     }
   }
@@ -917,6 +920,8 @@ static game_state_t enroute_to_obvious_by_peeking(
     card_t deck_card = tbl_deck.cards.back();
     Option<card_t> foundation_card = initial_state.foundation[deck_card.suite];
 
+    std::cout << "Deck card = " << deck_card.to_string() << std::endl;
+
     if (foundation_card.is_some()
         && foundation_card.get().number == deck_card.number - 1) {
       *moved = true;
@@ -984,8 +989,6 @@ here:
         }
       }
     }
-
-    std::cout << state << std::endl;
 
     if (state.remaining_pile_size != 0) {
 
@@ -1128,6 +1131,7 @@ game_state_t strategy_term(game_state_t state) {
 
 game_state_t strategy_step(const game_state_t & start_state, bool *moved)
 {
+  std::cout << "\n=====> CYCLE BEGINS" << std::endl;
   std::cout << start_state << std::endl;
 
   if (no_hidden_cards_left(start_state)) {

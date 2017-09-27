@@ -234,7 +234,6 @@ game_state_t move_from_visible_pile_to_tableau(
     const uint32_t deck
 )
 {
-  std::cout << "Moving from visible pile to tableau" << std::endl;
   if (!state.waste_pile_top.is_some()) {
     std::cout << state << std::endl;
     throw IllegalMoveException(
@@ -242,7 +241,7 @@ game_state_t move_from_visible_pile_to_tableau(
     );
   }
 
-  const card_t & waste_pile_top = state.waste_pile_top.get();
+  const card_t waste_pile_top = state.waste_pile_top.get();
   const tableau_deck_t & tableau_deck = state.tableau[deck];
 
   if (!is_transfer_legal(waste_pile_top, tableau_deck)) {
