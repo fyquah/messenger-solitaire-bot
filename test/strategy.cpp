@@ -559,7 +559,19 @@ static std::vector<std::pair<Move, card_t>> compute_join_path(
   uint32_t limit;
 
   if (dest.is_some()) {
-    limit = dest.get().number - 1;
+
+    if (check_join_compatability(src, dest.get())) {
+      *ptr_exists = true;
+      return ret;
+
+    } else if (check_transitive_join_compatability(src, dest.get())) {
+      limit = dest.get().number - 1;
+
+    } else {
+      *ptr_exists = false;
+      return ret;
+
+    }
 
   } else {
     bool found = false;
@@ -986,7 +998,11 @@ here:
 
           bool exists;
 
-          std::cout << "Wrap up join path between " << i << " and " << j << std::endl;
+          std::cout
+            << "Wrap up join path between "
+            << i
+            << " and "
+            << j << std::endl;
           auto path = compute_join_path(state, i, j, &exists);
 
           if (!exists) {
@@ -997,8 +1013,12 @@ here:
               loc_tableau(i, 0),
               loc_tableau(j, 0)
           );
+          std::cout << "Performing auxilaty steps" << std::endl;
+          std::cout << "Path.size() = " << path.size() << std::endl;
           state = execute_path(state, path, i, loc_tableau(j, 0));
-          state = perform_move(state, move);
+          std::cout << "Performing actual transfer" << std::endl;
+          std::cout << state << std::endl;
+          std::cout << "Move done!" << std::endl;
           break;
         }
       }
@@ -1059,14 +1079,11 @@ static game_state_t do_wrap_up_work(game_state_t state)
     std::cout << card.to_string() << ", ";
   }
   std::cout << std::endl;
-    std::cout << "Wrap up iter 0" << std::endl;
+  for (int i = 0 ; i < 10 ; i++) {
+    std::cout << "Wrap up iter " << i << std::endl;
     state = strategy_wrap_up(state);
-    std::cout << "Wrap up iter 1" << std::endl;
-    state = strategy_wrap_up(state);
-    std::cout << "Wrap up iter 2" << std::endl;
-    state = strategy_wrap_up(state);
-    assert(false);
-    return state;
+  }
+  return state;
 }
 
 game_state_t strategy_term(game_state_t state) {

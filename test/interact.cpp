@@ -326,7 +326,13 @@ game_state_t move_from_column_to_column(
   if (position.position >= src_deck.cards.size()
       || !is_transfer_legal(src_deck.cards[position.position], dest_deck)) {
     throw IllegalMoveException(
-        "Transfer is from deck a to a illegal"
+        "Transfer from deck "
+        + std::to_string(position.deck)
+        + "."
+        + std::to_string(position.position)
+        + " to deck "
+        + std::to_string(destination)
+        + " is illegal"
     );
   }
 
