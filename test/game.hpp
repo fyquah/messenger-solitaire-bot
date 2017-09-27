@@ -60,6 +60,9 @@ const char * print_number(number_t number);
 /* TODO(fyquah): Ideally I want to have all the fields below be [const].
  * it is, however, fairly hard to initialize structs with array fields in
  * C++.
+ *
+ * The right way to share immutable values, in the first place, is to use
+ * shared pointers and heap-allocated values anyway.
  * */
 struct game_state_t {
   Option<card_t> foundation[4];

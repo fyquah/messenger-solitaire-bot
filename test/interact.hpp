@@ -43,4 +43,10 @@ game_state_t move_from_column_to_column(
     const uint32_t destination
 );
 
+
+bool is_promote_to_foundation_legal(
+    const Option<card_t> foundation,
+    const card_t & card
+);
+
 #endif

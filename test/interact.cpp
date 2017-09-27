@@ -182,7 +182,7 @@ static bool is_transfer_legal(
   }
 }
 
-static bool is_promote_to_foundation_legal(
+bool is_promote_to_foundation_legal(
     const Option<card_t> foundation,
     const card_t & card)
 {

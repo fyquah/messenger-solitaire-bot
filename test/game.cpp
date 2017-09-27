@@ -75,6 +75,7 @@ std::ostream& operator<<(std::ostream & out, const game_state_t & game)
   out << "\n";
 
   out << "Stock pile size = " << game.stock_pile_size << "\n";
+  out << "Remaining pile size = " << game.remaining_pile_size << "\n";
 
   for (int i = 0 ; i < 7 ; i++) {
     const tableau_deck_t & deck = game.tableau[i];

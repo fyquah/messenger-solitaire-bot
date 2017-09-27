@@ -46,6 +46,9 @@ $(PROGRAM_LIB): $(TEST_SRC) src/entry_point.o $(ROBOT_LIB)
 run: $(PROGRAM_LIB) $(ROBOT_LIB) $(ENTRY_POINT)
 	java Main
 
+undo: $(PROGRAM_LIB) $(ROBOT_LIB) $(ENTRY_POINT)
+	java Main undo
+
 
 clean:
 	rm -f $(PROGRAM_LIB) $(ROBOT_LIB) src/robot.o src/entry_point.o test/main.o

@@ -856,7 +856,7 @@ static bool no_hidden_cards_left(const game_state_t & state)
 
 static game_state_t strategy_wrap_up(game_state_t state)
 {
-  /* This should, in principle, be possible ? */
+  /* Try to use all existing cards */
   int cycle = state.remaining_pile_size + 1;
 
   while (cycle && state.remaining_pile_size != 0) {
@@ -871,11 +871,23 @@ static game_state_t strategy_wrap_up(game_state_t state)
         if (vec.size() == 0) {
           if (card.number == KING) {
             state = move_from_visible_pile_to_tableau(state, i);
+            glob_stock_pile.erase(
+                std::remove(
+                  glob_stock_pile.begin(),
+                  glob_stock_pile.end(),
+                  card),
+                glob_stock_pile.end());
           }
         } else {
           if (suite_color(card.suite) != suite_color(vec.back().suite)
               && card.number == vec.back().number - 1) {
             state = move_from_visible_pile_to_tableau(state, i);
+            glob_stock_pile.erase(
+                std::remove(
+                  glob_stock_pile.begin(),
+                  glob_stock_pile.end(),
+                  card),
+                glob_stock_pile.end());
           }
         }
       }
@@ -892,14 +904,115 @@ static game_state_t strategy_wrap_up(game_state_t state)
     cycle -= 1;
   }
 
+  /* Transfer stacks that don't start with King to other stacks. */
+  while (true) {
+    bool all_starts_with_king = true;
+
+    for (int i = 0 ; i < 7 ; i++) {
+      const auto & cards = state.tableau[i].cards;
+
+
+      if (cards.size() != 0 && cards[0].number != KING) {
+      std::cout << "I should do something about " << i << std::endl;
+        all_starts_with_king = false;
+
+        for (int j = 0 ; j < 7 ; j++) {
+          if (i == j) {
+            continue;
+          }
+
+          bool exists;
+
+          std::cout << "Wrap up join path between " << i << " and " << j << std::endl;
+          auto path = compute_join_path(state, i, j, &exists);
+
+          if (!exists) {
+            continue;
+          }
+
+          std::shared_ptr<Move> move = std::make_shared<Move>(
+              loc_tableau(i, 0),
+              loc_tableau(j, 0)
+          );
+          state = execute_path(state, path, i, loc_tableau(j, 0));
+          state = perform_move(state, move);
+          break;
+        }
+
+        break;
+      }
+    }
+
+    if (all_starts_with_king) {
+      break;
+    }
+  }
+
   return state;
+}
+
+static bool is_game_finisished(const game_state_t & state)
+{
+  for (int i = 0 ; i < 4 ; i++) {
+    if (!state.foundation[i].is_some()
+        || state.foundation[i].get().number != KING) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static game_state_t strategy_actually_finish_game(const game_state_t & state)
+{
+  for (int i = 0 ; i < 7 ; i++) {
+    if (state.tableau[i].cards.size() == 0) {
+      continue;
+    }
+
+    card_t card = state.tableau[i].cards.back();
+
+    if (is_promote_to_foundation_legal(state.foundation[card.suite], card)) {
+      return move_from_tableau_to_foundation(state, i, card.suite);
+    }
+  }
+
+  if (state.waste_pile_top.is_some()) {
+    card_t card = state.waste_pile_top.get();
+
+    if (is_promote_to_foundation_legal(state.foundation[card.suite], card)) {
+      return move_from_visible_pile_to_foundation(state, card.suite);
+    }
+  }
+
+  if (state.remaining_pile_size == 0) {
+    return reset_stock_pile(state);
+  } else {
+    return draw_from_stock_pile(state);
+  }
 }
 
 game_state_t strategy_step(const game_state_t & start_state, bool *moved)
 {
+  std::cout << start_state << std::endl;
+
   if (no_hidden_cards_left(start_state)) {
-    *moved = true;
-    return strategy_wrap_up(start_state);
+    *moved = false;  /* TODO(fyquah): This is a hack to force program
+                        termination. */
+
+    std::cout << "WRAPING UP!" << std::endl;
+    game_state_t state = start_state;
+
+    for (int i = 0 ; i < 10 ; i++) {
+      state = strategy_wrap_up(state);
+    }
+    std::cout << "Wrapped up!" << std::endl;
+
+    /* Finishing game */
+    while (!is_game_finisished(state)) {
+      state = strategy_actually_finish_game(state);
+    }
+    return state;
   }
 
   /* Rule 0 to 2 (the base rules) are in the obvious_move function. */
@@ -928,8 +1041,11 @@ game_state_t strategy_step(const game_state_t & start_state, bool *moved)
   return state;
 }
 
-void print_internal_state()
+void strategy_print_internal_state()
 {
+  if (glob_stock_pile.size() == 0) {
+    std::cout << "<STOCK PILE IS EMPTY!>" << std::endl;
+  }
   for (int i = 0 ; i < glob_stock_pile.size() ; i++) {
     std::cout << i << ": " << glob_stock_pile[i].to_string() << "\n";
   }
