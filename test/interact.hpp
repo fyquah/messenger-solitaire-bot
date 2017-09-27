@@ -48,5 +48,6 @@ bool is_promote_to_foundation_legal(
     const Option<card_t> foundation,
     const card_t & card
 );
+void interact_short_sleep();
 
 #endif

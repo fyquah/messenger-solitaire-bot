@@ -1104,6 +1104,8 @@ game_state_t strategy_term(game_state_t state) {
   if (no_hidden_cards_left(state)) {
     state = do_wrap_up_work(state);
 
+    interact_short_sleep();
+
     while (!is_game_finisished(state)) {
       state = strategy_actually_finish_game(state);
     }

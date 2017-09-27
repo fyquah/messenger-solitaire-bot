@@ -16,6 +16,16 @@ const char * IllegalMoveException::what() const throw()
   return msg.c_str();
 }
 
+static bool is_short_sleep = false;
+
+void interact_short_sleep() 
+{
+  is_short_sleep = true;
+}
+
+static const uint32_t LONG_SLEEP = 220000;
+static const uint32_t SHORT_SLEEP = 200000;
+
 static void click_card(uint32_t x, uint32_t y)
 {
   robot_mouse_move(robot, x, y);
@@ -25,7 +35,7 @@ static void click_card(uint32_t x, uint32_t y)
   /* TODO(fyquah): This isn't super reliable, as it is decided based on
    * the processor's (underterministic) speed.
    */
-  usleep(250000);  /* Microseconds */
+    usleep(SHORT_SLEEP);
 }
 
 static void drag_mouse(
@@ -37,7 +47,8 @@ static void drag_mouse(
   robot_mouse_press(robot, ROBOT_BUTTON1_MASK);
   robot_mouse_move(robot, to.first, to.second);
   robot_mouse_release(robot, ROBOT_BUTTON1_MASK);
-  usleep(250000);
+
+    usleep(SHORT_SLEEP);
 }
 
 static void unsafe_remove_card_from_visible_pile(game_state_t *state)
