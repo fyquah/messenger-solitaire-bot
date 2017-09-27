@@ -645,26 +645,6 @@ static std::vector<std::pair<Move, card_t>> compute_join_path(
       << dest_deck
       << std::endl;
 
-    for (card_t node : glob_stock_pile) {
-      if (node.number == tail
-          && check_transitive_join_compatability(src, node)) {
-
-        Move move = Move(
-            loc_waste_pile(),
-
-            /* TODO(fyquah): Shouldn't really matter to have a random
-             * subindex here. But it sure is inelegant.
-             */
-            loc_tableau(dest_deck, 0));
-        ret.push_back(std::make_pair(move, node));
-
-        std::cout << "---> Found in deck\n";
-
-        tail --;
-        goto found;
-      }
-    }
-
     for (int i = 0 ; i < 7 ; i++) {
       if (i == src_deck || i == dest_deck || left_in_deck[i] <= 0) {
         continue;
@@ -702,6 +682,27 @@ static std::vector<std::pair<Move, card_t>> compute_join_path(
       }
     }
 
+    for (card_t node : glob_stock_pile) {
+      if (node.number == tail
+          && check_transitive_join_compatability(src, node)) {
+
+        Move move = Move(
+            loc_waste_pile(),
+
+            /* TODO(fyquah): Shouldn't really matter to have a random
+             * subindex here. But it sure is inelegant.
+             */
+            loc_tableau(dest_deck, 0));
+        ret.push_back(std::make_pair(move, node));
+
+        std::cout << "---> Found in deck\n";
+
+        tail --;
+        goto found;
+      }
+    }
+
+    
     *ptr_exists = false;
     return ret;
 found:
