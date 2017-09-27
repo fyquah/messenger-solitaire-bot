@@ -25,7 +25,7 @@ static void click_card(uint32_t x, uint32_t y)
   /* TODO(fyquah): This isn't super reliable, as it is decided based on
    * the processor's (underterministic) speed.
    */
-  usleep(200000);  /* Microseconds */
+  usleep(250000);  /* Microseconds */
 }
 
 static void drag_mouse(
@@ -37,7 +37,7 @@ static void drag_mouse(
   robot_mouse_press(robot, ROBOT_BUTTON1_MASK);
   robot_mouse_move(robot, to.first, to.second);
   robot_mouse_release(robot, ROBOT_BUTTON1_MASK);
-  usleep(200000);
+  usleep(250000);
 }
 
 static void unsafe_remove_card_from_visible_pile(game_state_t *state)
@@ -170,6 +170,9 @@ static bool is_transfer_legal(
       && card.number == KING) {
     return true;
 
+  } else if (deck.cards.size() == 0) {
+    return false;
+
   } else if (deck.cards.back().number - 1 == card.number
       && (deck.cards.back().suite % 2) != (card.suite % 2)) {
     return true;
@@ -207,7 +210,8 @@ game_state_t move_from_visible_pile_to_tableau(
 
   if (!is_transfer_legal(waste_pile_top, tableau_deck)) {
     throw IllegalMoveException(
-        "Intended transfer from waste pile to tableau is illegal");
+        "Intended transfer from waste pile to tableau is illegal. Tbl "
+        + std::to_string(deck));
   }
 
   /* Dragging the card in the game */

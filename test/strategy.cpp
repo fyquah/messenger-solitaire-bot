@@ -843,8 +843,65 @@ static game_state_t enroute_to_obvious_by_peeking(
   return initial_state;
 }
 
+static bool no_hidden_cards_left(const game_state_t & state)
+{
+  for (int i = 0 ; i < 7 ; i++) {
+    if (state.tableau[i].num_down_cards != 0) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static game_state_t strategy_wrap_up(game_state_t state)
+{
+  /* This should, in principle, be possible ? */
+  int cycle = state.remaining_pile_size + 1;
+
+  while (cycle && state.remaining_pile_size != 0) {
+
+    /* try to play the card */
+    if (state.waste_pile_top.is_some()) {
+      card_t card = state.waste_pile_top.get();
+
+      for (int i = 0 ; i < 7 ; i++) {
+        const auto & vec = state.tableau[i].cards;
+
+        if (vec.size() == 0) {
+          if (card.number == KING) {
+            state = move_from_visible_pile_to_tableau(state, i);
+          }
+        } else {
+          if (suite_color(card.suite) != suite_color(vec.back().suite)
+              && card.number == vec.back().number - 1) {
+            state = move_from_visible_pile_to_tableau(state, i);
+          }
+        }
+      }
+    }
+
+    if (state.remaining_pile_size != 0) {
+      if (state.stock_pile_size == 0) {
+        state = reset_stock_pile(state);
+      } else {
+        state = draw_from_stock_pile(state);
+      }
+    }
+
+    cycle -= 1;
+  }
+
+  return state;
+}
+
 game_state_t strategy_step(const game_state_t & start_state, bool *moved)
 {
+  if (no_hidden_cards_left(start_state)) {
+    *moved = true;
+    return strategy_wrap_up(start_state);
+  }
+
   /* Rule 0 to 2 (the base rules) are in the obvious_move function. */
   game_state_t state = start_state;
   std::shared_ptr<Move> move = calculate_obvious_move(state);
@@ -869,4 +926,11 @@ game_state_t strategy_step(const game_state_t & start_state, bool *moved)
   }
   *moved = false;
   return state;
+}
+
+void print_internal_state()
+{
+  for (int i = 0 ; i < glob_stock_pile.size() ; i++) {
+    std::cout << i << ": " << glob_stock_pile[i].to_string() << "\n";
+  }
 }

@@ -38,11 +38,16 @@ int entry_point(int argc, const char *argv[])
 
   std::cout << "Initial state = " << game_state << std::endl;
 
-  game_state = strategy_init(game_state);
-  do {
-    game_state = strategy_step(game_state, &moved);
-  } while(moved);
+  try {
+    game_state = strategy_init(game_state);
+    do {
+      game_state = strategy_step(game_state, &moved);
+    } while(moved);
+  } catch (std::exception e) {
 
+  }
+
+  strategy_print_internal_state();
   std::cout << game_state << "\n";
 
   robot_mouse_move(robot, 2000, 100);
