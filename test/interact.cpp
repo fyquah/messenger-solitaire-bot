@@ -23,8 +23,8 @@ void interact_short_sleep()
   is_short_sleep = true;
 }
 
-static const uint32_t LONG_SLEEP = 220000;
-static const uint32_t SHORT_SLEEP = 200000;
+static const uint32_t LONG_SLEEP  = 200000;
+static const uint32_t SHORT_SLEEP = 50000;
 
 static void click_card(uint32_t x, uint32_t y)
 {
@@ -35,7 +35,11 @@ static void click_card(uint32_t x, uint32_t y)
   /* TODO(fyquah): This isn't super reliable, as it is decided based on
    * the processor's (underterministic) speed.
    */
+  if (is_short_sleep) {
     usleep(SHORT_SLEEP);
+  } else {
+    usleep(LONG_SLEEP);
+  }
 }
 
 static void drag_mouse(
@@ -43,12 +47,24 @@ static void drag_mouse(
     std::pair<uint32_t, uint32_t> to
 )
 {
-  robot_mouse_move(robot, from.first, from.second);
-  robot_mouse_press(robot, ROBOT_BUTTON1_MASK);
-  robot_mouse_move(robot, to.first, to.second);
-  robot_mouse_release(robot, ROBOT_BUTTON1_MASK);
+  if (is_short_sleep) {
 
+    /* When we enter short sleep mode, we want everything to go directly to
+     * the foundation. Hence, we can skip dragging.
+     */
+
+    robot_mouse_move(robot, from.first, from.second);
+    robot_mouse_press(robot, ROBOT_BUTTON1_MASK);
+    robot_mouse_release(robot, ROBOT_BUTTON1_MASK);
     usleep(SHORT_SLEEP);
+
+  } else {
+    robot_mouse_move(robot, from.first, from.second);
+    robot_mouse_press(robot, ROBOT_BUTTON1_MASK);
+    robot_mouse_move(robot, to.first, to.second);
+    robot_mouse_release(robot, ROBOT_BUTTON1_MASK);
+    usleep(LONG_SLEEP);
+  }
 }
 
 static void unsafe_remove_card_from_visible_pile(game_state_t *state)
@@ -144,6 +160,7 @@ game_state_t draw_from_stock_pile(const game_state_t & state)
   game_state_t next_state = state;
 
   if (state.stock_pile_size <= 0) {
+    std::cout << state << std::endl;
     throw IllegalMoveException(
         "Cannot draw from stock pile when stock pile size is <= 0");
   }
@@ -164,6 +181,7 @@ game_state_t reset_stock_pile(const game_state_t & state)
   game_state_t next_state = state;
 
   if (state.stock_pile_size != 0) {
+    std::cout << state << std::endl;
     throw IllegalMoveException(
         "Cannot reset stock pile when stock_pile_size != 0");
   }
@@ -218,6 +236,7 @@ game_state_t move_from_visible_pile_to_tableau(
 {
   std::cout << "Moving from visible pile to tableau" << std::endl;
   if (!state.waste_pile_top.is_some()) {
+    std::cout << state << std::endl;
     throw IllegalMoveException(
         "waste pile is missing. Cannot move to tableau."
     );
@@ -227,6 +246,7 @@ game_state_t move_from_visible_pile_to_tableau(
   const tableau_deck_t & tableau_deck = state.tableau[deck];
 
   if (!is_transfer_legal(waste_pile_top, tableau_deck)) {
+    std::cout << state << std::endl;
     throw IllegalMoveException(
         "Intended transfer from waste pile to tableau is illegal. Tbl "
         + std::to_string(deck));
@@ -256,6 +276,7 @@ game_state_t move_from_visible_pile_to_foundation(
 )
 {
   if (!state.waste_pile_top.is_some()) {
+    std::cout << state << std::endl;
     throw IllegalMoveException("Missing visible pile to to move to foundation");
   }
 
@@ -263,6 +284,7 @@ game_state_t move_from_visible_pile_to_foundation(
   const card_t & waste_pile_top = state.waste_pile_top.get();
 
   if (!is_promote_to_foundation_legal(foundation, waste_pile_top)) {
+    std::cout << state << std::endl;
     throw IllegalMoveException(
         "Intended promotion from waste pile to foundation is illegal");
   }
@@ -293,6 +315,7 @@ game_state_t move_from_tableau_to_foundation(
   const tableau_deck_t & tbl_deck = state.tableau[tableau_position];
 
   if (tbl_deck.cards.size() == 0) {
+    std::cout << state << std::endl;
     throw IllegalMoveException(
         "No cards in tableau to move to foundation.");
   }
@@ -301,6 +324,7 @@ game_state_t move_from_tableau_to_foundation(
   const card_t & foundation_bound = tbl_deck.cards.back();
 
   if (!is_promote_to_foundation_legal(foundation, foundation_bound)) {
+    std::cout << state << std::endl;
     throw IllegalMoveException(
         "Intended promotion from tableau to foundation is illegal");
   }
@@ -336,6 +360,7 @@ game_state_t move_from_column_to_column(
 
   if (position.position >= src_deck.cards.size()
       || !is_transfer_legal(src_deck.cards[position.position], dest_deck)) {
+    std::cout << state << std::endl;
     throw IllegalMoveException(
         "Transfer from deck "
         + std::to_string(position.deck)
