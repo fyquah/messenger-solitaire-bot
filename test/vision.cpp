@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <algorithm>
 
 #include <opencv2/core/core.hpp>
@@ -135,6 +136,7 @@ static suite_t recognize_suite(uint32_t *pixels)
 
 static card_t recognize_card(uint32_t x, uint32_t y)
 {
+  usleep(200000);
   uint32_t *number_pixels =
     new uint32_t[CARD_NUMBER_HEIGHT * CARD_NUMBER_WIDTH];
   uint32_t *suite_pixels =

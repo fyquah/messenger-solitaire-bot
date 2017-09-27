@@ -904,20 +904,20 @@ static game_state_t enroute_to_obvious_by_peeking(
       continue;
     }
 
-    card_t deck_card = tbl_deck.cards[0];
+    card_t deck_card = tbl_deck.cards.back();
     Option<card_t> foundation_card = initial_state.foundation[deck_card.suite];
-    bool exists;
 
-    std::vector<std::pair<Move, card_t>> auxilary_path =
-      compute_foundation_path(initial_state, src, &exists);
-
-    if (exists) {
+    if (foundation_card.is_some()
+        && foundation_card.get().number == deck_card.number - 1) {
       *moved = true;
-      return execute_path(initial_state, auxilary_path, src,
-          loc_foundation(deck_card.suite));
+      std::cout << "Executing eager promotion" << std::endl;
+      auto move = make_move(
+          loc_tableau(src, tbl_deck.cards.size() - 1),
+          loc_foundation(deck_card.suite)
+      );
+      return perform_move(initial_state, move);
     }
   }
-
 
   *moved = false;
   return initial_state;
