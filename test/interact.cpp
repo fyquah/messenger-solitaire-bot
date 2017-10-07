@@ -26,7 +26,7 @@ void interact_short_sleep()
 static const uint32_t LONG_SLEEP  = 200000;
 static const uint32_t SHORT_SLEEP = 200000;
 
-static void click_card(uint32_t x, uint32_t y)
+void click_card(uint32_t x, uint32_t y)
 {
   robot_mouse_move(robot, x, y);
   robot_mouse_press(robot, ROBOT_BUTTON1_MASK);

@@ -49,5 +49,6 @@ bool is_promote_to_foundation_legal(
     const card_t & card
 );
 void interact_short_sleep();
+void click_card(uint32_t x, uint32_t y);
 
 #endif

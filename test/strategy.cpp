@@ -6,6 +6,7 @@
 #include <exception>
 #include <sstream>
 
+#include "robot.h"
 #include "strategy.hpp"
 #include "game.hpp"
 #include "interact.hpp"
@@ -1073,6 +1074,37 @@ static bool is_game_finisished(const game_state_t & state)
 
 static game_state_t strategy_actually_finish_game(const game_state_t & state)
 {
+  if (state.remaining_pile_size == 0) {
+    game_state_t finished_state;
+    click_card(300, 870);
+
+    for (int i = 0 ; i < 7 ; i++) {
+      tableau_deck_t deck;
+      deck.num_down_cards = 0;
+      deck.cards = std::vector<card_t>();
+      finished_state.tableau[i] = deck;
+    }
+
+    card_t opt = { .suite = DIAMOND, .number = KING };
+    finished_state.foundation[DIAMOND] = Option<card_t>(opt);
+
+    opt = { .suite = CLUB,  .number = KING };
+    finished_state.foundation[CLUB] = Option<card_t>(opt);
+
+    opt = {  .suite = HEART, .number = KING };
+    finished_state.foundation[HEART] = Option<card_t>(opt);
+
+    opt = { .suite = SPADE, .number = KING };
+    finished_state.foundation[SPADE] = Option<card_t>(opt);
+
+    finished_state.waste_pile_top = Option<card_t>();
+
+    finished_state.stock_pile_size = 0;
+    finished_state.remaining_pile_size = 0;
+
+    return finished_state;
+  }
+
   for (int i = 0 ; i < 7 ; i++) {
     if (state.tableau[i].cards.size() == 0) {
       continue;
@@ -1117,6 +1149,18 @@ static game_state_t do_wrap_up_work(game_state_t state)
 game_state_t strategy_term(game_state_t state) {
 
   if (no_hidden_cards_left(state)) {
+
+    while (true) {
+      std::shared_ptr<Move> move = calculate_obvious_move(state);
+      if (move != NULL) {
+        Move move_object = *move.get();
+        update_glob_stock_pile(state, move_object);
+        state = perform_move(state, move);
+      } else {
+        break;
+      }
+    }
+
     state = do_wrap_up_work(state);
 
     while (!is_game_finisished(state)) {
