@@ -4,7 +4,7 @@ A bot to play solitaire in messenger.
 
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=xFNd-foQYrs"
 target="_blank"><img src="http://img.youtube.com/vi/xFNd-foQYrs/0.jpg" 
-alt="Video Demo" width="240" height="180" border="10" /></a
+alt="Video Demo" width="240" height="180" border="10" /></a>
 
 ## Usage
 
