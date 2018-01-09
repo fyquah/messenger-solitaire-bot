@@ -59,7 +59,7 @@ in TD-backgammon work.
 
 there has been quite a bit of previous work in this -- a simple search 
 in google scholars yield some interesting results. A fun experiment
-to try "learning" is see if a policy to "remember" what it has seen
+to try "learning" to see if a policy to "remember" what it has seen
 in the draw pile without explicitly adding it in the state.
 
 *3. Why did you have to partially implement this in C++, rather than just use
